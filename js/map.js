@@ -3,12 +3,11 @@
    No external dependencies.  Inline topojson decoder, inline
    Mercator projection, inline pan/zoom.  Only the topojson data
    itself is fetched (from jsDelivr).
-   Two families of layer colour the countries: the band layers
-   (coverage, stability, economy, resources, conflict, legitimacy)
-   through four level classes the stylesheet colours per layer, and
-   the stat views (technology, infrastructure, military, academia,
-   medical, population) through an exact shade between two colours,
-   set inline, with a ramp in the legend.
+   Two families of layer colour the countries: a band layer
+   (coverage) through four level classes the stylesheet colours, and
+   a stat view (population, from the static country rows) through an
+   exact shade between two colours, set inline, with a ramp in the
+   legend.  Clicking a country opens the card in js/worldui.js.
    ═══════════════════════════════════════════════════════════════ */
 (() => {
 "use strict";
@@ -455,26 +454,13 @@ function featureCentroidLonLat(g) {
       indexByIso.get(iso).push(el);
     }
     /* stat views: a continuous value 0..1 painted as an exact shade between two colours, inline, rather than the four
-       level classes the band layers use.  `key` reads a stat level; `value` reads anything else. */
+       level classes the band layers use.  `value` reads the country's fixed facts (js/data.js) or its state. */
+    const popOf = iso => (window.DATA ? window.DATA.popOf(iso) : 0);
     const STAT_VIEWS = {
-      technology:     { key: "technology", label: "Tech", lo: "#1c2a33", hi: "#7fd7ff", legend: ["0", "100"] },
-      infrastructure: { key: "infra",      label: "Infra", lo: "#232a2e", hi: "#c9d6dc", legend: ["0", "100"] },
-      military:       { key: "military",   label: "Mil",  lo: "#33221f", hi: "#ff7a50", legend: ["0", "100"] },
-      academia:       { key: "academia",   label: "Acad", lo: "#2a2333", hi: "#c9a0ff", legend: ["0", "100"] },
-      medical:        { key: "medical",    label: "Med",  lo: "#1f3026", hi: "#7fe0a0", legend: ["0", "100"] },
-      population:     { label: "Pop", lo: "#2e2a1f", hi: "#ffd060", legend: ["1 M", "1 B"],
-                        value: st => Math.min(1, Math.log10(Math.max(0, st.pop || 0) + 1) / 3.2),
-                        show: st => `${st.pop >= 100 ? Math.round(st.pop) : (st.pop || 0).toFixed(1)} M` },
-      endowment:      { label: "Endow", lo: "#3a2a24", hi: "#ffd060", legend: ["imports", "exports"],   // self-sufficiency in the binding type, uncapped
-                        value: st => { const r = bindingRatio(st); return r == null ? 0.5 : Math.max(0, Math.min(1, (Math.log2(Math.max(1e-4, r)) + 5) / 7)); },   // a tenth of its need to four times it
-                        show: st => { const r = bindingRatio(st); return r == null ? "—" : r >= 10 ? `${Math.round(r)}×` : `${r.toFixed(1)}×`; } },
+      population: { label: "Pop", lo: "#2e2a1f", hi: "#ffd060", legend: ["1 M", "1 B"],
+                    value: (st, iso) => Math.min(1, Math.log10(Math.max(0, popOf(iso)) + 1) / 3.2),
+                    show: (st, iso) => { const p = popOf(iso); return `${p >= 100 ? Math.round(p) : p.toFixed(1)} M`; } },
     };
-    function bindingRatio(st) {                            // production over use of the type it covers least, before the market
-      if (!st || !st.production || !st.consumption) return null;
-      let r = null;
-      for (let k = 0; k < 4; k++) if (st.consumption[k] > 0) { const q = st.production[k] / st.consumption[k]; if (r == null || q < r) r = q; }
-      return r;
-    }
     const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const rampCache = new Map();
     function ramp(lo, hi, v) {                            // an exact shade between two colours, cached per 1/64 step
@@ -487,7 +473,7 @@ function featureCentroidLonLat(g) {
       }
       return c;
     }
-    const statValue = (name, st) => { const sv = STAT_VIEWS[name]; if (!sv || !st || !st.st) return 0; return sv.value ? sv.value(st) : st.st[sv.key] / 100; };
+    const statValue = (name, st, iso) => { const sv = STAT_VIEWS[name]; return sv ? sv.value(st, iso) : 0; };
     function setValue(iso2, v) {
       const els = indexByIso.get(iso2);
       if (!els) return;
@@ -506,28 +492,14 @@ function featureCentroidLonLat(g) {
     }
     function setValues(o) { for (const k in o) setValue(k, o[k]); }
 
-    /* ── layers: what lv1..lv4 mean is decided here and coloured by CSS.  Each band layer reads its own raw value and
-       cuts it where the world's countries actually sit (stability: median 60, quartiles 45 and 72), not at quarter marks. ── */
-    const down = cuts => raw => raw >= cuts[0] ? 1 : raw >= cuts[1] ? 2 : raw >= cuts[2] ? 3 : 4;   // lv1 is the good end
-    const up = cuts => raw => raw >= cuts[2] ? 4 : raw >= cuts[1] ? 3 : raw >= cuts[0] ? 2 : 1;     // lv4 is the good end
+    /* ── layers: what lv1..lv4 mean is decided here and coloured by CSS. ── */
     const LEGEND = {
       coverage:  { labels: ["Clean", "Low", "Moderate", "High", "Surge"], cols: ["var(--land)", "var(--lv1)", "var(--lv2)", "var(--lv3)", "var(--lv4)"],
                    value: st => st.covered ? st.coverageLevel : 0, level: v => lvl(Math.max(0, Math.min(1, v))) },
-      stability: { labels: ["", "Stable", "Steady", "Uneasy", "Unrest"],  cols: ["var(--land)", "#3f8a5f", "#8a9a3a", "#d09a30", "#ff4060"],
-                   value: st => st.st ? st.st.stability : 0, level: down([70, 55, 40]) },
-      economy:   { labels: ["", "Poor", "Modest", "Wealthy", "Rich"],     cols: ["var(--land)", "#2f3d40", "#2f5a4a", "#3f8a5f", "#7fd79f"],
-                   value: (st, iso, W_) => st.st && W_ ? W_.ecoClamped(iso) : 0, level: up([30, 50, 70]) },
-      supply:    { labels: ["", "Supplied", "Tight", "Short", "Starved"], cols: ["var(--land)", "#35503f", "#8a9a3a", "#d09a30", "#ff4060"],
-                   value: (st, iso, W_) => st.st && W_ ? W_.floorOf(iso) : 100, level: down([99.5, 95, 80]) },
-      conflict:  { labels: ["At peace", "", "", "Occupied", "At war"],   cols: ["var(--land)", "var(--land)", "var(--land)", "#a05a3a", "#ff4060"],
-                   value: (st, iso, W_) => (W_ && W_.fighting(iso)) ? 1 : st.occupiedBy ? 0.5 : 0, level: v => lvl(v) },
-      legitimacy: { labels: ["", "Secure", "Steady", "Shaky", "Failing"], cols: ["var(--land)", "#3a6a9a", "#4a8a8a", "#d09a30", "#ff4060"],
-                   value: st => st.st && st.legit != null ? st.legit : 100, level: down([80, 60, 40]) },
     };
     let layer = "coverage";
     const legend = document.getElementById("mapLegend"), grad = document.getElementById("mapGrad");
     function setLayer(name) {
-      if (name === "resources") name = "supply";           // the old name of the supply layer
       const sv = STAT_VIEWS[name];
       if (!LEGEND[name] && !sv) return;
       layer = name;
@@ -557,70 +529,14 @@ function featureCentroidLonLat(g) {
     const S = window.ENTITY;
     if (S && typeof S.installMapSync === "function") {
       S.installMapSync(() => {
-        const W_ = window.WORLD;
         for (const iso in S.COUNTRY_STATE) {
           const st = S.COUNTRY_STATE[iso];
-          const v = LEGEND[layer] ? LEGEND[layer].value(st, iso, W_) : statValue(layer, st);   // a band layer's raw value, or a stat view's 0..1
+          const v = LEGEND[layer] ? LEGEND[layer].value(st, iso) : statValue(layer, st, iso);   // a band layer's raw value, or a stat view's 0..1
           setValue(iso, v);
         }
       });
     }
 
-    /* ── conflict overlay: war outlines and lines, occupation hatch ──
-       Drawn on top of the tiles inside worldG, so it pans and zooms with
-       them; built once for tile 0 and cloned to the wrap tiles. */
-    const el = tag => document.createElementNS(SVGNS, tag);
-    const defs = el("defs"), pat = el("pattern"), hatchLine = el("line");
-    pat.setAttribute("id", "hatch"); pat.setAttribute("width", "6"); pat.setAttribute("height", "6");
-    pat.setAttribute("patternUnits", "userSpaceOnUse"); pat.setAttribute("patternTransform", "rotate(45)");
-    hatchLine.setAttribute("x1", "0"); hatchLine.setAttribute("y1", "0"); hatchLine.setAttribute("x2", "0"); hatchLine.setAttribute("y2", "6");
-    hatchLine.setAttribute("stroke", "#ffb0a8"); hatchLine.setAttribute("stroke-width", "1.5");
-    pat.appendChild(hatchLine); defs.appendChild(pat); svgEl.insertBefore(defs, svgEl.firstChild);
-    const overlayG = el("g"); overlayG.setAttribute("class", "overlay"); overlayG.setAttribute("pointer-events", "none");
-    const overlayTiles = TILE_OFFSETS.map(t => { const g = el("g"); g.setAttribute("transform", `translate(${t * W} 0)`); overlayG.appendChild(g); return g; });
-    worldG.appendChild(overlayG);
-    const pathByIso = new Map();
-    for (const pth of tile.querySelectorAll("path.country")) pathByIso.set(pth.getAttribute("data-iso"), pth.getAttribute("d"));
-    const posByIso = new Map();
-    for (const c of catalogue) if (c.iso2 && isFinite(c.lon) && isFinite(c.lat)) posByIso.set(c.iso2, project(c.lon, c.lat));
-    function drawOverlay() {
-      const W_ = window.WORLD; if (!W_) return;
-      const frag = document.createDocumentFragment();
-      for (const w of W_.WORLD_STATE.wars) {
-        for (const [iso, cls] of [[w.att, "att"], [w.def, "def"]]) {
-          const d = pathByIso.get(iso); if (!d) continue;
-          const pth = el("path"); pth.setAttribute("d", d); pth.setAttribute("class", "war-outline " + cls); frag.appendChild(pth);
-        }
-        const a = posByIso.get(w.att), b = posByIso.get(w.def);
-        if (a && b) {
-          let bx = b[0];
-          if (bx - a[0] > W / 2) bx -= W; else if (a[0] - bx > W / 2) bx += W;   // the shorter way round
-          const ln = el("line");
-          ln.setAttribute("x1", a[0]); ln.setAttribute("y1", a[1]); ln.setAttribute("x2", bx); ln.setAttribute("y2", b[1]);
-          ln.setAttribute("class", "war-line"); frag.appendChild(ln);
-        }
-      }
-      for (const iso in W_.COUNTRY_STATE) {
-        const st = W_.COUNTRY_STATE[iso]; if (!st.occupiedBy) continue;
-        const d = pathByIso.get(iso); if (!d) continue;
-        const pth = el("path"); pth.setAttribute("d", d); pth.setAttribute("class", "occupied"); frag.appendChild(pth);
-      }
-      overlayTiles.forEach((g, i) => { g.innerHTML = ""; g.appendChild(TILE_OFFSETS[i] === 0 ? frag : frag.cloneNode(true)); });
-    }
-    let overlayDue = 0;
-    addEventListener("entity:day", () => { const t = performance.now(); if (t > overlayDue) { overlayDue = t + 500; drawOverlay(); } });
-    // the world's prices, in the legend: what a unit of each type fetches on the exchange today
-    const pricesEl = document.getElementById("mapPrices");
-    let pricesDue = 0;
-    const showPrices = () => {
-      const WS = window.WORLD && window.WORLD.WORLD_STATE, M = WS && WS.market;
-      if (!pricesEl || !M || !M.price) return;
-      const names = ["energy", "materials", "food", "water"];
-      pricesEl.innerHTML = names.map((n, k) => `<span title="world price of ${n} — 1 is the base; buyers pay the spread and transport on top"><b>${n}</b> ${M.price[k].toFixed(2)}</span>`).join(" · ");
-    };
-    addEventListener("entity:day", () => { const t = performance.now(); if (t > pricesDue) { pricesDue = t + 1000; showPrices(); } });
-    addEventListener("entity:world", () => setTimeout(showPrices, 0));
-    addEventListener("entity:world", drawOverlay);
     function pulse(iso2) {
       const els = indexByIso.get(iso2); if (!els) return;
       for (const e of els) { e.classList.remove("pulse"); void e.getBoundingClientRect(); e.classList.add("pulse"); }
@@ -630,7 +546,6 @@ function featureCentroidLonLat(g) {
     const handle = {
       countries: catalogue,
       setValue, setValues, setLayer, pulse,
-      overlay: { draw: drawOverlay },
       get layer() { return layer; },
       get svg() { return svgEl; },
       get world() { return worldG; },
@@ -640,7 +555,6 @@ function featureCentroidLonLat(g) {
     if (cnt) cnt.innerHTML = `<b>${catalogue.length}</b> places`;
     setStatus("map ready · " + catalogue.length + " places", "ok");
     setLayer("coverage");
-    drawOverlay();
     dbg("[Entity map] ready");
 
     /* ── tooltip ── */
@@ -657,49 +571,18 @@ function featureCentroidLonLat(g) {
     }
     function showTooltip(ev, iso2, name) {
       const region = S && S.COUNTRY_REGION[iso2];
-      let body = "";
-      if (region && S.REGION_IDS.includes(region)) {
-        const agg = S.regionAgg(region);
-        const lv = lvl(agg.coverageLevel);
-        body =
-          `<div class="region">${agg.name} · ${agg.covered}/${agg.countries} covered</div>` +
-          `<div class="stat">Coverage <b>${(agg.coverageLevel * 100).toFixed(1)}%</b></div>` +
-          `<div class="bar"><div class="fill" style="width:${agg.coverageLevel * 100}%${lv ? `;background:var(--lv${lv})` : ""}"></div></div>` +
-          `<div class="stat">Detection <b>${(agg.detection * 100).toFixed(0)}%</b></div>` +
-          `<div class="stat">Action <b>${(agg.govAction * 100).toFixed(0)}%</b></div>` +
-          `<div class="stat">Response <b>${(agg.responseProgress * 100).toFixed(1)}%</b></div>` +
-          `<div class="stat">${agg.env.temp}°C · ${agg.env.humidity}% · ${agg.env.urban}% urban</div>`;
-      } else {
-        const st = S && S.COUNTRY_STATE[iso2];
-        const v = st && st.covered ? st.coverageLevel : 0;
-        const lv = lvl(v);
-        body =
-          `<div class="region">unassigned region</div>` +
-          `<div class="stat">Coverage <b>${(v * 100).toFixed(1)}%</b></div>` +
-          `<div class="bar"><div class="fill" style="width:${v * 100}%${lv ? `;background:var(--lv${lv})` : ""}"></div></div>`;
-      }
-      const lv2 = lvl(region && S ? S.regionAgg(region).coverageLevel : 0);
-      // the country itself: government, headline stats, and anything unusual
-      const cs = S && S.COUNTRY_STATE[iso2], W_ = window.WORLD, G = window.GOV;
-      let mine = "";
-      if (cs && cs.st && G && W_) {
-        const flags = [];
-        const wars = W_.warsOf(iso2);
-        if (wars.length) flags.push("at war with " + wars.map(w => W_.nameOf(w.att === iso2 ? w.def : w.att)).join(", "));
-        const fronts = W_.frontsOf(iso2);
-        if (fronts.length) flags.push("fighting " + fronts.map(f => W_.nameOf(f.front.a === iso2 ? f.front.d : f.front.a)).join(", ") + " on a front");
-        if (cs.occupiedBy) flags.push("occupied by " + W_.nameOf(cs.occupiedBy));
-        if (cs.border) flags.push(["", "borders restricted", "borders closed"][cs.border]);
-        const r0 = v => Math.round(v), sv = STAT_VIEWS[layer];
-        const viewed = sv ? `<span>${sv.label} <b>${sv.show ? sv.show(cs) : r0(cs.st[sv.key])}</b></span>` : "";   // the stat the map is coloured by, first
-        mine = `<div class="gov">${G.labelOf(cs)}</div>`
-          + `<div class="mini">${viewed}<span>Econ <b>${r0(W_.ecoIndexOf(iso2))}</b></span><span>Stab <b>${r0(cs.st.stability)}</b></span>`
-          + `<span>Mil <b>${r0(cs.st.military)}</b></span><span>Med <b>${r0(cs.st.medical)}</b></span><span>Res <b>${r0(W_.floorOf(iso2))}</b></span></div>`
-          + (flags.length ? `<div class="flag">${flags.join(" · ")}</div>` : "");
-      }
+      const st = S && S.COUNTRY_STATE[iso2];
+      const v = st && st.covered ? st.coverageLevel : 0, lv = lvl(v);
+      const p = popOf(iso2);
+      const head = region && S.REGION_IDS.includes(region)
+        ? (agg => `<div class="region">${agg.name} · ${agg.covered}/${agg.countries} covered · ${agg.env.temp}°C · ${agg.env.humidity}%</div>`)(S.regionAgg(region))
+        : `<div class="region">unassigned region</div>`;
       tip.innerHTML =
-        `<div class="name"><span class="sw"${lv2 ? ` style="background:var(--lv${lv2})"` : ""}></span>${name} <span class="iso">${iso2}</span></div>`
-        + mine + body;
+        `<div class="name"><span class="sw"${lv ? ` style="background:var(--lv${lv})"` : ""}></span>${name} <span class="iso">${iso2}</span></div>`
+        + head
+        + `<div class="stat">Coverage <b>${(v * 100).toFixed(1)}%</b></div>`
+        + `<div class="bar"><div class="fill" style="width:${v * 100}%${lv ? `;background:var(--lv${lv})` : ""}"></div></div>`
+        + `<div class="stat">Population <b>${p >= 100 ? Math.round(p) : p.toFixed(1)} M</b></div>`;
       tip.classList.add("show");
       moveTooltip(ev);
     }
@@ -814,8 +697,8 @@ function featureCentroidLonLat(g) {
       const els = indexByIso.get(iso2) || [t];
       for (const el of els) el.classList.add("selected");
       if (S && S.openCountryModal) S.openCountryModal(iso2);
-      else {                                      // the screen lives in js/country.js; missing means stale scripts
-        console.error("[Entity map] no country screen is registered — the page is probably stale; hard-reload (Ctrl+Shift+R)");
+      else {                                      // the card lives in js/worldui.js; missing means stale scripts
+        console.error("[Entity map] no country card is registered — the page is probably stale; hard-reload (Ctrl+Shift+R)");
         setStatus("stale page — reload", "err");
       }
       return true;

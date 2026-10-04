@@ -83,8 +83,8 @@ function init() {
   }
   setInterval(playerTick, TICK_MS);
 
-  // The outbreak's spread and response run inside the world's day tick
-  // (js/world.js), on the same clock as everything else.
+  // The world clock (js/world.js) follows the bench's play, pause and
+  // speed; nothing on the map moves on its own yet.
 
   // ── Research projects ────────────────────────────────────────────────────
   function refreshBounties() {
@@ -375,14 +375,14 @@ function init() {
     S.updateEntityUI();
   };
 
-  // ── Save / load v5 ───────────────────────────────────────────────────────
+  // ── Save / load v8 ───────────────────────────────────────────────────────
   // Country and world blocks come from js/world.js's pack table; a field
   // added there is saved here without any change to this file.
   const SAVE_KEY = "entity_save_v3";
   const W = window.WORLD;
   function serialize() {
     return {
-      v: 7, t: Date.now(),
+      v: 8, t: Date.now(),
       world: W.packWorld(),
       player: {
         money: player.money, scrutiny: player.scrutiny, job: player.job,
@@ -401,7 +401,6 @@ function init() {
         maxVariants: player.maxVariants,
       },
       countries: W.packAll(),
-      pairs: W.packPairs(),
       bounties: activeBounties.map(b => b ? {
         id: b.id, name: b.name, desc: b.desc, university: b.university,
         D: b.D, tier: b.tier, money: b.money, notoriety: b.notoriety,
@@ -427,7 +426,7 @@ function init() {
     let data;
     try { data = JSON.parse(raw); }
     catch (e) { toast("Save corrupted."); return false; }
-    if (!data || !(data.v >= 2 && data.v <= 7)) {
+    if (!data || !(data.v >= 2 && data.v <= 8)) {
       toast("Save version mismatch — cannot load.");
       return false;
     }
@@ -461,21 +460,19 @@ function init() {
       player.careerHistory = [];
     }
 
-    if (data.v === 7) {
+    if (data.v === 8) {
       // Fresh world on the saved seed, then the saved state over it.
       W.newWorld(data.world && data.world.seed);
       W.unpackWorld(data.world);
       if (data.countries) W.unpackAll(data.countries);
-      W.unpackPairs(data.pairs);
     } else {
-      // Older formats (v2-v6) get a new world with only the saved outbreak laid over it:
-      // their countries and pairs no longer match the model, so they are not carried.
+      // Older formats (v2-v7) get a new world with only the saved coverage laid over it:
+      // their nation-simulation fields no longer exist, so they are not carried.
       W.newWorld();
       for (const iso in (data.countries || {})) {
         if (!W.isAgent(iso)) continue;
         const c = data.countries[iso], s = W.ensureCountry(iso);
         s.covered = !!c.c; s.coverageLevel = c.lv || 0; s.profile = c.pr || null;
-        s.detection = c.dt || 0; s.govAction = c.ga || 0; s.responseProgress = c.rp || 0;
       }
     }
 

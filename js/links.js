@@ -1,35 +1,39 @@
 /* ═══════════════════════════════════════════════════════════════
-   Entity — links: how countries connect, and what travels
+   Entity — links: how countries connect
    Three kinds of link.  Land borders come from the map (countries
-   whose shapes share an edge; a curated table cuts capacity where a
-   mountain range lies along one).  Sea links join coastal countries
-   to their nearest coastal neighbours.  Air links join every country
-   to the partners its airport reaches best.  Each link has a capacity
-   from the stats at both ends, refreshed weekly, and each day carries
-   a flow in both directions: tourists (seasonal, attracted by wealth,
-   order and openness) and migrants (chasing better economies and
-   stability).  The outbreak rides those flows; economies and
-   populations feel them.
+   whose shapes share an edge; a curated table in js/geo.js cuts
+   capacity where a mountain range lies along one).  Sea links join
+   coastal countries to their nearest coastal neighbours.  Air links
+   join every country to the partners its airport reaches best.  Each
+   link has a capacity from the fixed facts of the countries at both
+   ends (js/data.js: population, infrastructure, economy), so the
+   graph is the same in every world.
 
-   Built once from the map hand-off (LINKS.rebuild) and never saved:
-   a loaded game rebuilds it from the same map.  Reads world state and
-   ENTITY_CONFIG only inside functions that run after load.
+   Nothing travels on the links yet: what rides them, and how, is the
+   subject of the redesign.  Built once from the map hand-off
+   (LINKS.rebuild) and never saved: a loaded game rebuilds it from the
+   same map.  Reads ENTITY_CONFIG only inside functions that run after
+   load.
    ═══════════════════════════════════════════════════════════════ */
 (() => {
 "use strict";
-const CO = window.COUNTRIES;
+const { RANGE_CAP, MICRO_LAND, MICRO_LANDLOCKED } = window.GEO;
+const D = window.DATA;
 const cfg = () => window.ENTITY_CONFIG;
-const W   = () => window.WORLD;
 
-const eco = s => Math.min(100, CO.ecoIndex(s.output, cfg()));   // the economy as a level, for the flows
 const edges = [];                          // { a, b, type, km, cap, range }
 const byIso = Object.create(null);         // iso -> [edge index]
 const pairKey = Object.create(null);       // "type|A|B" -> edge index
-let flowArr = new Float64Array(0);         // [2i] a->b, [2i+1] b->a
 let pos = Object.create(null);             // iso -> { lon, lat }
 let coastKm = Object.create(null);         // iso -> km of coastline (0 = landlocked)
-let effects = Object.create(null);         // iso -> { tourismIn, migIn, migOut }
 let ready = false;
+
+const facts = iso => D.rowOf(iso);         // the fixed per-country facts the graph is built from
+/* An airport's reach: a wealthy, built-up, populous country is a hub. */
+function hub(iso) {
+  const f = facts(iso);
+  return (f.economy + f.st.infra) / 200 * Math.pow(Math.max(0.01, f.pop), 0.4);
+}
 
 function haversineKm(a, b) {
   const R = 6371, toRad = d => d * Math.PI / 180;
@@ -54,91 +58,52 @@ function rebuild(topo) {
   for (const k in byIso) delete byIso[k];
   for (const k in pairKey) delete pairKey[k];
   pos = Object.create(null); coastKm = Object.create(null);
-  const isAgent = W().isAgent;
-  const cs = (topo.countries || []).filter(c => isAgent(c.iso2) && isFinite(c.lon) && isFinite(c.lat));
-  for (const c of cs) pos[c.iso2] = { lon: c.lon, lat: c.lat };
+  const c = cfg() || {};
+  const seaK = c.seaK ?? 8, airK = c.airK ?? 8, airRange = c.airRange ?? 8000;
+  const cs = (topo.countries || []).filter(x => D.isAgent(x.iso2) && isFinite(x.lon) && isFinite(x.lat));
+  for (const x of cs) pos[x.iso2] = { lon: x.lon, lat: x.lat };
   for (const iso in (topo.coastKm || {})) if (pos[iso]) coastKm[iso] = topo.coastKm[iso];
   // Dot-marker micro-states have no shape: coastal unless known landlocked.
-  for (const c of cs) if (c.id == null && coastKm[c.iso2] == null && !CO.MICRO_LANDLOCKED.has(c.iso2)) coastKm[c.iso2] = 20;
+  for (const x of cs) if (x.id == null && coastKm[x.iso2] == null && !MICRO_LANDLOCKED.has(x.iso2)) coastKm[x.iso2] = 20;
 
   // land: shared map edges + the micro-states' borders; km = border length
   for (const bd of (topo.borders || []))
     if (pos[bd.a] && pos[bd.b])
-      addEdge(bd.a, bd.b, "land", Math.max(1, bd.km), { range: CO.RANGE_CAP[key("", bd.a, bd.b).slice(1)] ?? 1 });
-  for (const pair of CO.MICRO_LAND) {
+      addEdge(bd.a, bd.b, "land", Math.max(1, bd.km), { range: RANGE_CAP[key("", bd.a, bd.b).slice(1)] ?? 1 });
+  for (const pair of MICRO_LAND) {
     const [a, b] = pair.split("|");
     if (pos[a] && pos[b]) addEdge(a, b, "land", 10, {});
   }
   // sea: each coastal country to its nearest coastal partners
-  const coastal = cs.filter(c => coastKm[c.iso2] > 0);
+  const coastal = cs.filter(x => coastKm[x.iso2] > 0);
   for (const a of coastal) {
     const cands = coastal.filter(b => b !== a).map(b => [haversineKm(pos[a.iso2], pos[b.iso2]), b.iso2]);
     cands.sort((x, y) => x[0] - y[0]);
-    for (const [d, iso] of cands.slice(0, cfg().seaK)) addEdge(a.iso2, iso, "sea", d, {});
+    for (const [d, iso] of cands.slice(0, seaK)) addEdge(a.iso2, iso, "sea", d, {});
   }
   // air: each country to the partners its hub reaches best
-  const S = W().COUNTRY_STATE;
   for (const a of cs) {
-    const ha = hub(S[a.iso2]);
+    const ha = hub(a.iso2);
     const cands = cs.filter(b => b !== a).map(b => {
       const d = haversineKm(pos[a.iso2], pos[b.iso2]);
-      return [ha * hub(S[b.iso2]) * Math.exp(-d / cfg().airRange), d, b.iso2];
+      return [ha * hub(b.iso2) * Math.exp(-d / airRange), d, b.iso2];
     });
     cands.sort((x, y) => y[0] - x[0]);
-    for (const [, d, iso] of cands.slice(0, cfg().airK)) addEdge(a.iso2, iso, "air", d, {});
+    for (const [, d, iso] of cands.slice(0, airK)) addEdge(a.iso2, iso, "air", d, {});
   }
-  flowArr = new Float64Array(edges.length * 2);
   ready = true;
+  refreshCapacity();
   dbg("[Entity links]", count("land"), "land,", count("sea"), "sea,", count("air"), "air");
 }
-function hub(s) { return s ? (eco(s) + s.st.infra) / 200 * Math.pow(Math.max(0.01, s.pop), 0.4) : 0; }
 
-/* ── Capacity: what each link could carry, from the stats at both ends ── */
+/* ── Capacity: what each link could carry, from the facts at both ends ── */
 function refreshCapacity() {
-  const c = cfg(), S = W().COUNTRY_STATE;
+  const c = cfg(); if (!c) return;
   for (const e of edges) {
-    const A = S[e.a], B = S[e.b];
-    if (!A || !B) { e.cap = 0; continue; }
-    const infraF = 0.5 + (A.st.infra + B.st.infra) / 400;
+    const infraF = 0.5 + (facts(e.a).st.infra + facts(e.b).st.infra) / 400;
     if (e.type === "land")      e.cap = c.landCap * Math.sqrt(e.km) * e.range * infraF;
     else if (e.type === "sea")  e.cap = c.seaCap * Math.sqrt(Math.min(coastKm[e.a] || 1, coastKm[e.b] || 1)) * Math.exp(-e.km / c.seaRange) * infraF;
-    else                        e.cap = c.airCap * hub(A) * hub(B) * Math.exp(-e.km / c.airRange) * infraF;
-  }
-}
-
-/* ── Daily flows ───────────────────────────────────────────────── */
-const POLICY = s => [1, cfg().borderRestricted, cfg().borderClosed][s.border | 0] ?? 1;
-function season(iso) {
-  const c = cfg(), doy = W().day % 365;
-  const peak = (pos[iso] && pos[iso].lat < 0) ? 15 : 195;            // mid-Jan south, mid-Jul north
-  return 1 + c.seasonAmp * Math.cos(2 * Math.PI * (doy - peak) / 365);
-}
-const emit    = s => eco(s) / 100 * Math.sqrt(Math.max(0.01, s.pop));
-const attract = s => (0.4 * eco(s) + 0.3 * s.st.infra + 0.3 * s.st.stability) / 100 * (0.5 + s.econOpen / 200);
-function directed(A, B, isoA, isoB, cap, c) {
-  let pol = POLICY(A) * POLICY(B);
-  if (W().warBetween(isoA, isoB)) pol *= c.warFlow;         // little crosses a front line
-  const day = W().day;                                       // an outbreak travel ban, either way round
-  if ((B.ban === isoA && day < B.banUntil) || (A.ban === isoB && day < A.banUntil)) pol *= c.travelBan;
-  const tourism = cap * emit(A) * attract(B) * season(isoB) * pol;
-  const gap = Math.max(0, (eco(B) - eco(A)) + (B.st.stability - A.st.stability));
-  const migration = c.migBase * gap / 100 * B.econOpen / 100 * cap * pol;
-  return [tourism, migration];
-}
-function flows() {
-  const c = cfg(), S = W().COUNTRY_STATE;
-  effects = Object.create(null);
-  const eff = iso => effects[iso] || (effects[iso] = { tourismIn: 0, migIn: 0, migOut: 0 });
-  for (let i = 0; i < edges.length; i++) {
-    const e = edges[i], A = S[e.a], B = S[e.b];
-    if (!A || !B || e.cap <= 0) { flowArr[2 * i] = flowArr[2 * i + 1] = 0; continue; }
-    const [tAB, mAB] = directed(A, B, e.a, e.b, e.cap, c);
-    const [tBA, mBA] = directed(B, A, e.b, e.a, e.cap, c);
-    flowArr[2 * i] = tAB + mAB; flowArr[2 * i + 1] = tBA + mBA;
-    const ea = eff(e.a), eb = eff(e.b);
-    eb.tourismIn += tAB; ea.tourismIn += tBA;
-    eb.migIn += mAB; ea.migOut += mAB;
-    ea.migIn += mBA; eb.migOut += mBA;
+    else                        e.cap = c.airCap * hub(e.a) * hub(e.b) * Math.exp(-e.km / c.airRange) * infraF;
   }
 }
 
@@ -161,22 +126,17 @@ function linked(a, b) {
   for (const i of (byIso[a] || [])) { const e = edges[i]; if (e.a === b || e.b === b) return true; }
   return false;
 }
-function flow(a, b) {                       // a -> b, summed over every link type
-  let f = 0;
-  for (const i of (byIso[a] || [])) {
-    const e = edges[i];
-    if (e.a === a && e.b === b) f += flowArr[2 * i];
-    else if (e.b === a && e.a === b) f += flowArr[2 * i + 1];
-  }
-  return f;
+function edgesOf(iso) { return (byIso[iso] || []).map(i => edges[i]); }
+function capacity(a, b) {                   // between two countries, summed over every link type
+  let t = 0;
+  for (const i of (byIso[a] || [])) { const e = edges[i]; if (e.a === b || e.b === b) t += e.cap; }
+  return t;
 }
-const flowAt = (i, dir) => flowArr[2 * i + dir];
 
 window.LINKS = {
-  rebuild, refreshCapacity, flows, count, linked, linkedBy, rangeOf, partners, flow, flowAt,
+  rebuild, refreshCapacity, count, linked, linkedBy, rangeOf, partners, edgesOf, capacity,
   edges, byIso,
   get ready() { return ready; },
-  get effects() { return effects; },
   get coastKm() { return coastKm; },
 };
 })();

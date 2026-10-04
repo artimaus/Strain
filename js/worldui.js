@@ -1,50 +1,100 @@
 /* ═══════════════════════════════════════════════════════════════
    Entity — world dialogs
-   The region detail dialog and the deploy dialog, with the two cost
-   formulas they use.  Presentation over world.js state; the player
-   and the top-bar refresh are reached through window.ENTITY, so this
-   loads after shell.js and registers its openers on ENTITY the same
-   way progression.js registers its own.  The country screen is
-   js/country.js, which loads next and opens the deploy dialog from
-   here.
+   The country card, the region dialog and the deploy dialog, with the
+   two cost formulas the deploy uses.  Presentation over world.js state
+   and the links; the player and the top-bar refresh are reached
+   through window.ENTITY, so this loads after shell.js and registers
+   its openers on ENTITY the same way progression.js registers its
+   own.  map.js opens the country card on a click; the card opens the
+   region dialog and the deploy dialog.
    ═══════════════════════════════════════════════════════════════ */
 (() => {
 "use strict";
-const { $, modal, uiAlert, rgb, dietNames, traitNames } = window.UI;
+const { $, modal, uiAlert, dietNames, traitNames } = window.UI;
 const { REGION_NAME, REGION_IDS, COUNTRY_REGION, popOf } = window.GEO;
 const S = window.ENTITY, W = window.WORLD;
-const { COUNTRY_STATE, ensureCountry, regionAgg, regionMembers, syncMapColors } = W;
-const regionModal = modal("mapRegionModal"), deployModal = modal("deployModal");
+const { COUNTRY_STATE, ensureCountry, regionAgg, regionMembers, syncMapColors, nameOf } = W;
+const regionModal = modal("mapRegionModal"), deployModal = modal("deployModal"), countryModal = modal("countryModal");
 
 function deployCost(variant)      { return S.ENTITY_CONFIG.deployCostBase + S.player.variants.length * S.ENTITY_CONFIG.deployCostPerVariant; }
 function deployScrutiny(variant)  { return S.ENTITY_CONFIG.deployScrutinyBase + Math.floor((1 - variant.potency) * 10); }
 
+const fmtPop = p => `${p >= 100 ? Math.round(p) : (+p || 0).toFixed(1)} M`;
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const row = (k, v) => `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+const swatchOf = lv => lv > 0 ? `var(--lv${Math.min(4, 1 + Math.floor(lv * 4))})` : "var(--land)";
+
+/* ── Region dialog ─────────────────────────────────────────────── */
 function openRegionModal(regionId) {
   if (!REGION_IDS.includes(regionId)) return;
   const agg = regionAgg(regionId);
-  const sw = $("regSw"); const nm = $("regName"); const body = $("regBody");
-  sw.style.background = `var(--lv${Math.min(4, 1 + Math.floor(agg.coverageLevel * 4))})`;
-  nm.textContent = agg.name;
+  $("regSw").style.background = swatchOf(agg.covered ? agg.coverageLevel : 0);
+  $("regName").textContent = agg.name;
   const rows = [
     ["Countries", `${agg.covered} / ${agg.countries} covered`],
-    ["Population", `${agg.population}M`],
+    ["Population", fmtPop(agg.population)],
     ["Mean coverage", `${(agg.coverageLevel * 100).toFixed(1)}%`],
-    ["Mean detection", `${(agg.detection * 100).toFixed(0)}%`],
-    ["Mean gov. action", `${(agg.govAction * 100).toFixed(0)}%`],
-    ["Mean response", `${(agg.responseProgress * 100).toFixed(1)}%`],
     ["Temperature", `${agg.env.temp}°C`],
     ["Humidity", `${agg.env.humidity}%`],
     ["Urban", `${agg.env.urban}%`],
   ];
   const list = regionMembers(regionId).filter(iso => COUNTRY_STATE[iso] && COUNTRY_STATE[iso].covered)
-    .slice(0, 24).join(", ") || "none yet";
-  body.innerHTML = rows.map(([k, v]) =>
-      `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("")
-    + `<div class="traits">Covered: <b>${list}</b></div>`;
+    .map(nameOf).slice(0, 24).join(", ") || "none yet";
+  $("regBody").innerHTML = rows.map(([k, v]) => row(k, v)).join("")
+    + `<div class="traits">Covered: <b>${esc(list)}</b></div>`;
   regionModal.open();
 }
 $("regClose").onclick = () => regionModal.close();
 
+/* ── Country card: what a country is, whether it is covered, and the
+   way to the deploy dialog.  Small by design; the redesign grows it. ── */
+let cardIso = null;
+function openCountryModal(iso) {
+  if (!iso || iso === "—") return;
+  cardIso = iso;
+  renderCountry();
+  countryModal.open();
+}
+function renderCountry() {
+  const iso = cardIso; if (!iso) return;
+  const st = COUNTRY_STATE[iso] || null, agent = W.isAgent(iso), region = COUNTRY_REGION[iso] || null;
+  const L = window.LINKS, links = L && L.ready ? L.edgesOf(iso) : [];
+  const n = type => links.filter(e => e.type === type).length;
+  const lv = st && st.covered ? st.coverageLevel : 0;
+  $("cmSw").style.background = swatchOf(lv);
+  $("cmName").textContent = nameOf(iso);
+  $("cmIso").textContent = iso;
+  $("cmRegion").textContent = region ? REGION_NAME[region] : "unassigned region";
+  let variant = "—";
+  if (st && st.profile && window.C) {
+    const s = C.statsOf(st.profile.g0, st.profile.g1);
+    variant = `${C.MODE_NAME[s.mode]} · ${s.type ? "Type A" : "Type B"}`;
+  }
+  const neighbours = links.filter(e => e.type === "land").map(e => nameOf(e.a === iso ? e.b : e.a)).sort().slice(0, 10);
+  const rows = [
+    ["Population", fmtPop(popOf(iso))],
+    ["Status", !agent ? "scenery · no state" : st && st.covered ? `covered · ${(lv * 100).toFixed(1)}%` : "clean"],
+    ["Variant", variant],
+    ["Links", links.length ? `${n("land")} land · ${n("sea")} sea · ${n("air")} air` : "—"],
+  ];
+  $("cmBody").innerHTML = rows.map(([k, v]) => row(k, esc(v))).join("")
+    + (neighbours.length ? `<div class="traits">Borders: <b>${esc(neighbours.join(", "))}</b></div>` : "")
+    + `<div class="country-btns">`
+    + `<button id="cmDeploy" class="danger"${agent ? "" : " disabled"}>🌍 Deploy variant</button>`
+    + (region ? `<button id="cmRegionBtn">Region · ${esc(REGION_NAME[region])}</button>` : "")
+    + `</div>`;
+  const dep = $("cmDeploy");
+  if (dep) dep.onclick = async () => {
+    const v = S.player.variants.find(x => x.potency >= 0.25);
+    if (!v) { await uiAlert("No variant in storage is fit to deploy.\n\nInspect an entity on the bench and press Collect."); return; }
+    openDeployModal(v, iso);
+  };
+  const rb = $("cmRegionBtn");
+  if (rb) rb.onclick = () => openRegionModal(region);
+}
+$("cmClose").onclick = () => countryModal.close();
+
+/* ── Deploy dialog ─────────────────────────────────────────────── */
 const deployState = { variant: null, iso2: null };
 function openDeployModal(variant, preselectIso) {
   deployState.variant = variant;
@@ -62,9 +112,8 @@ function renderDeployTarget() {
   const iso = deployState.iso2;
   const el = $("deployTarget");
   if (!iso) { el.innerHTML = `<span class="dim">pick a country from the map</span>`; return; }
-  const c = W.worldMap ? W.worldMap.countries.find(x => x.iso2 === iso) : null;
   const region = COUNTRY_REGION[iso] || "—";
-  el.innerHTML = `<b>${c ? c.name : iso}</b> <span class="region">${iso} · ${REGION_NAME[region] || region}</span>`;
+  el.innerHTML = `<b>${esc(nameOf(iso))}</b> <span class="region">${iso} · ${REGION_NAME[region] || region}</span>`;
 }
 function renderDeploySummary() {
   const variant = deployState.variant;
@@ -103,7 +152,7 @@ async function runDeploy(variantId, iso2) {
   if (idx < 0) return false;
   const variant = S.player.variants[idx];
   if (variant.potency < 0.25) { await uiAlert("This variant is too degraded to deploy."); return false; }
-  if (!iso2 || !COUNTRY_REGION[iso2] || !window.WORLD.isAgent(iso2)) { await uiAlert("Choose a country first."); return false; }
+  if (!iso2 || !W.isAgent(iso2)) { await uiAlert("Choose a country first."); return false; }
   const moneyCost = deployCost(variant);
   if (S.player.money < moneyCost) { await uiAlert(`Need ${moneyCost} money.`); return false; }
   const st = ensureCountry(iso2);
@@ -122,6 +171,7 @@ async function runDeploy(variantId, iso2) {
   }
   syncMapColors();
   S.updateEntityUI();
+  if (countryModal.isOpen && cardIso === iso2) renderCountry();
   return true;
 }
 $("deployClose").onclick = $("deployCancel").onclick = () => deployModal.close();
@@ -136,5 +186,5 @@ $("deployConfirm").onclick = async () => {
     deployModal.close();
 };
 
-Object.assign(window.ENTITY, { openRegionModal, openDeployModal, deployCost });
+Object.assign(window.ENTITY, { openCountryModal, openRegionModal, openDeployModal, deployCost });
 })();

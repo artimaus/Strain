@@ -175,14 +175,7 @@
   </div>
   <div id="mapLegend">
     <div class="layers">
-      <button data-layer="coverage" class="on">Coverage</button><button data-layer="stability">Stability</button>
-      <button data-layer="economy">Economy</button><button data-layer="supply">Supply</button>
-      <button data-layer="conflict">Conflict</button><button data-layer="legitimacy">Legitimacy</button>
-    </div>
-    <div class="layers">
-      <button data-layer="technology">Technology</button><button data-layer="infrastructure">Infrastructure</button>
-      <button data-layer="military">Military</button><button data-layer="academia">Academia</button>
-      <button data-layer="medical">Medical</button><button data-layer="population">Population</button><button data-layer="endowment">Endowment</button>
+      <button data-layer="coverage" class="on">Coverage</button><button data-layer="population">Population</button>
     </div>
     <div class="grad" id="mapGrad" hidden><span class="lo">0</span><i></i><span class="hi">100</span></div>
     <div class="row"><span class="dot" style="background:var(--land)"></span> Clean</div>
@@ -190,7 +183,6 @@
     <div class="row"><span class="dot" style="background:var(--lv2)"></span> Moderate</div>
     <div class="row"><span class="dot" style="background:var(--lv3)"></span> High</div>
     <div class="row"><span class="dot" style="background:var(--lv4)"></span> Surge</div>
-    <div class="prices" id="mapPrices" title="world prices on the exchange"></div>
   </div>
   <div id="mapControls">
     <button id="mapZoomIn"  title="Zoom in">+</button>
@@ -216,7 +208,6 @@
       <h3 id="cmName">Country</h3>
       <span class="iso" id="cmIso">—</span>
       <span id="cmRegion"></span>
-      <button class="small" id="cmExpand" title="Expand all — open every section, or collapse them all">Expand all</button>
       <button id="cmClose">Close</button>
     </div>
     <div class="body" id="cmBody"></div>
@@ -290,10 +281,11 @@
 <!-- Load order matters.  boot starts the topojson preload; core defines C;
      worker carries the life step as source; ui provides the shared helpers.
      sheet precedes host (which opens it); tune follows host (it reads
-     ENTITY_PLATES, set on host's last line).  geo, bounties and world must
-     precede shell, which assembles window.ENTITY from them at load; worldui
-     follows shell (it needs ENTITY) and precedes map (which calls it only on
-     a click).  layout fits the bench last, once everything it measures exists. -->
+     ENTITY_PLATES, set on host's last line).  data, geo, bounties, world
+     and links must precede shell, which assembles window.ENTITY from them
+     at load; worldui follows shell (it needs ENTITY) and precedes map
+     (which opens its country card on a click).  layout fits the bench
+     last, once everything it measures exists. -->
 <script src="js/boot.js"></script>
 <script src="js/core.js"></script>
 <script src="js/worker.js"></script>
@@ -303,17 +295,11 @@
 <script src="js/tune.js"></script>
 <script src="js/data.js"></script>
 <script src="js/geo.js"></script>
-<script src="js/countries.js"></script>
 <script src="js/bounties.js"></script>
 <script src="js/world.js"></script>
-<script src="js/economy.js"></script>
 <script src="js/links.js"></script>
-<script src="js/gov.js"></script>
-<script src="js/decide.js"></script>
-<script src="js/events.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/worldui.js"></script>
-<script src="js/country.js"></script>
 <script src="js/wire.js"></script>
 <script src="js/map.js"></script>
 <script src="js/progression.js"></script>

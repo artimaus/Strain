@@ -442,10 +442,6 @@ footer{border-top:1px solid var(--line);padding:7px 16px;background:var(--panel)
 #mapTooltip .name .iso{color:var(--dim);font-weight:400}
 #mapTooltip .region{color:var(--dim);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
 #mapTooltip .stat{color:var(--dim)}
-#mapTooltip .gov{color:var(--cold);margin-bottom:2px}
-#mapTooltip .mini{display:flex;gap:8px;color:var(--dim);margin-bottom:4px}
-#mapTooltip .mini b{color:var(--bright);font-variant-numeric:tabular-nums}
-#mapTooltip .flag{color:var(--bad-soft)}
 #mapTooltip .stat b{color:var(--bright);font-variant-numeric:tabular-nums}
 #mapTooltip .bar{height:3px;background:var(--track);border-radius:2px;margin:4px 0 2px;overflow:hidden}
 #mapTooltip .bar .fill{height:100%;border-radius:2px;background:var(--lv3)}
@@ -459,36 +455,11 @@ footer{border-top:1px solid var(--line);padding:7px 16px;background:var(--panel)
 #mapLegend .grad{display:flex;align-items:center;gap:6px;margin:4px 0 2px}
 #mapLegend .grad i{flex:1;height:8px;border-radius:4px;border:1px solid var(--track);min-width:90px}
 #mapLegend .grad span{font-size:9px;color:var(--dim);font-variant-numeric:tabular-nums}
-/* layer palettes: setValue still writes lv1..lv4; the layer decides what they mean */
-#mapView[data-layer=stability] .lv1{fill:#3f8a5f} #mapView[data-layer=stability] .lv2{fill:#8a9a3a}
-#mapView[data-layer=stability] .lv3{fill:#d09a30} #mapView[data-layer=stability] .lv4{fill:#ff4060}
-#mapView[data-layer=economy] .lv1{fill:#2f3d40} #mapView[data-layer=economy] .lv2{fill:#2f5a4a}
-#mapView[data-layer=economy] .lv3{fill:#3f8a5f} #mapView[data-layer=economy] .lv4{fill:#7fd79f}
-#mapView[data-layer=supply] .lv1{fill:#35503f} #mapView[data-layer=supply] .lv2{fill:#8a9a3a}
-#mapView[data-layer=supply] .lv3{fill:#d09a30} #mapView[data-layer=supply] .lv4{fill:#ff4060}
-#mapView[data-layer=legitimacy] .lv1{fill:#3a6a9a} #mapView[data-layer=legitimacy] .lv2{fill:#4a8a8a}
-#mapView[data-layer=legitimacy] .lv3{fill:#d09a30} #mapView[data-layer=legitimacy] .lv4{fill:#ff4060}
 #mapLegend .layers{flex-wrap:wrap}
-#mapView[data-layer=conflict] .lv1,#mapView[data-layer=conflict] .lv2{fill:var(--land)}
-#mapView[data-layer=conflict] .lv3{fill:#a05a3a} #mapView[data-layer=conflict] .lv4{fill:#ff4060}
-/* country dialog: resources by type, the binding one in red */
-.res-table{margin:8px 0 4px;font-size:11px;display:grid;gap:3px}
-.res-row{display:flex;justify-content:space-between;gap:10px}
-.res-row .k{color:var(--dim);text-transform:capitalize;flex:none}
-.res-row .v{text-align:right}
-.res-row.bind .k,.res-row.bind b{color:var(--bad)}
-.res-row.wx .v{color:var(--dim)}
-/* conflict overlay: war outlines and lines, occupation hatch; a pulse when a headline is clicked */
-.war-outline{fill:none;stroke:#ff4060;stroke-width:1.8;pointer-events:none;animation:warpulse 1.2s ease-in-out infinite}
-.war-outline.def{stroke:#ffb040}
-.war-line{fill:none;stroke:#ff4060;stroke-width:1;stroke-dasharray:4 3;opacity:.8;pointer-events:none}
-.occupied{fill:url(#hatch);pointer-events:none}
-@keyframes warpulse{0%,100%{stroke-opacity:.35}50%{stroke-opacity:1}}
+/* a pulse when a headline is clicked */
 .country.pulse,.marker.pulse{animation:pulseland .5s ease-out 3}
 @keyframes pulseland{0%,100%{filter:none}50%{filter:brightness(2.6)}}
 #mapLegend .row{display:flex;align-items:center;gap:7px}
-#mapLegend .prices{margin-top:6px;padding-top:5px;border-top:1px solid var(--track);opacity:.85;font-size:9px;white-space:nowrap}
-#mapLegend .prices:empty{display:none}
 #mapLegend .dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--track);flex:none}
 #mapControls{position:absolute;bottom:14px;left:14px;display:flex;gap:4px;flex-direction:column}
 #mapControls button{background:var(--panel);padding:5px 10px;font-size:11px;min-height:30px;min-width:44px;justify-content:center}
@@ -514,28 +485,20 @@ footer{border-top:1px solid var(--line);padding:7px 16px;background:var(--panel)
 #mapView.wire-open #mapLegend{right:328px}
 @media (max-width:700px){ #mapWire{top:auto;left:10px;right:10px;bottom:56px;width:auto;height:45%} #mapWire.collapsed{left:auto;height:auto} }
 
-/* ── country / region detail ──────────────────────────────────── */
+/* ── country card / region detail ─────────────────────────────── */
 #countryModal,#mapRegionModal{z-index:60}
 #countryModal .win,#mapRegionModal .win{width:min(460px,100%);max-height:min(680px,100%)}
-#countryModal .win{width:min(760px,100%);max-height:min(780px,100%);min-width:0}
-#countryModal .country-btns{flex-wrap:wrap} #countryModal .country-btns button{flex:1 1 130px}
+#countryModal .bar h3{flex:0 1 auto}
+#countryModal .bar #cmRegion{flex:1;font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#countryModal .bar .iso{font-size:10px;color:var(--dim);background:var(--btn);padding:1px 7px;border-radius:8px;letter-spacing:.08em}
 #countryModal .body,#mapRegionModal .body{font-size:12px;line-height:1.8}
-#countryModal .row,#mapRegionModal .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ffffff08}
-#countryModal .row .k,#mapRegionModal .row .k{color:var(--dim)}
-#countryModal .row .v,#mapRegionModal .row .v{color:var(--bright);font-weight:600;font-variant-numeric:tabular-nums}
+#countryModal .row,#mapRegionModal .row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid #ffffff08}
+#countryModal .row .k,#mapRegionModal .row .k{color:var(--dim);flex:none}
+#countryModal .row .v,#mapRegionModal .row .v{color:var(--bright);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 #countryModal .traits,#mapRegionModal .traits{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)}
 #countryModal .traits b,#mapRegionModal .traits b{color:var(--cold)}
-#countryModal .traits b.good{color:var(--good)} #countryModal .traits b.bad{color:var(--bad)}
-.stat-bars{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;margin:8px 0}
-.stat-bar{display:grid;grid-template-columns:76px 1fr 26px;gap:6px;align-items:center;font-size:10px}
-.stat-bar .k{color:var(--dim);text-transform:capitalize}
-.stat-bar .track{height:5px;background:var(--track);border-radius:3px;overflow:hidden}
-.stat-bar .fill{height:100%;background:var(--cold);border-radius:3px}
-.stat-bar b{color:var(--bright);text-align:right;font-variant-numeric:tabular-nums}
-#countryModal .routes{margin-top:6px;font-size:10px;color:var(--faint);line-height:1.6}
-#countryModal .bar .iso{font-size:10px;color:var(--dim);background:var(--btn);padding:1px 7px;border-radius:8px;letter-spacing:.08em}
-#countryModal .country-btns{display:flex;gap:6px;margin-top:14px}
-#countryModal .country-btns button{flex:1;justify-content:center}
+#countryModal .country-btns{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+#countryModal .country-btns button{flex:1 1 130px;justify-content:center}
 
 /* ── confirm / alert ──────────────────────────────────────────── */
 #askModal{z-index:90}
@@ -560,7 +523,7 @@ footer{border-top:1px solid var(--line);padding:7px 16px;background:var(--panel)
 #deployModal .cost .warn{color:var(--bad)}
 #deployModal .foot{justify-content:flex-end}
 
-/* ── entity tuning (economy levers) ───────────────────────────── */
+/* ── entity tuning (the config panel) ───────────────────────────── */
 #entityTune{z-index:64}
 #entityTune .win{width:min(580px,100%);max-height:min(740px,100%)}
 #entityTune .body{padding:12px 14px}
@@ -628,40 +591,3 @@ footer{border-top:1px solid var(--line);padding:7px 16px;background:var(--panel)
   #gameOverModal .stats{font-size:10px}
 }
 @media (max-width:400px){ h1{display:none} }
-
-/* ── country screen (js/country.js): chips, vitals, collapsible sections ── */
-#countryModal .bar h3{flex:0 1 auto}
-#countryModal .bar #cmRegion{flex:1;font-size:10px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#countryModal .bar button.small{font-size:10px;padding:3px 8px;min-height:0}
-#countryModal .chips,#countryModal .outlook{display:flex;flex-wrap:wrap;gap:4px}
-#countryModal .chips{margin-bottom:8px}
-#countryModal .outlook{justify-content:flex-end}
-#countryModal .chip{font-size:9px;padding:1px 7px;border-radius:9px;background:var(--btn);color:var(--ink);border:1px solid var(--line);line-height:1.6;white-space:nowrap}
-#countryModal .chip.bad{color:#ffb0a8;border-color:#5a2a2a} #countryModal .chip.warn{color:var(--warm)}
-#countryModal .chip.good{color:var(--good)} #countryModal .chip.dim{color:var(--faint)}
-#countryModal .vitals{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
-#countryModal .vital{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;line-height:1.3;min-width:0}
-#countryModal .vital .k{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-#countryModal .vital b{display:block;font-size:17px;color:var(--bright);font-variant-numeric:tabular-nums}
-#countryModal .vital .sub{display:block;font-size:9px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.3em}
-#countryModal .essentials .row .v{text-align:right;font-weight:500}
-#countryModal .sections{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:12px;align-items:start}
-#countryModal details{border:1px solid var(--line);border-radius:8px;padding:0 9px;background:#0e1315;min-width:0}
-#countryModal summary{cursor:pointer;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:7px 0;list-style:none;user-select:none}
-#countryModal summary::-webkit-details-marker{display:none}
-#countryModal summary::before{content:"▸ ";color:var(--faint)} #countryModal details[open] summary::before{content:"▾ "}
-#countryModal .sec{padding:0 0 8px;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
-#countryModal .sec .traits{margin-top:6px;padding-top:6px}
-#countryModal .feeds{font-size:10px;line-height:1.4;padding:0 0 4px 8px;color:var(--dim)}
-#countryModal .wbar{display:inline-block;width:80px;height:5px;background:var(--track);border-radius:3px;overflow:hidden;vertical-align:middle}
-#countryModal .wbar i{display:block;height:100%;background:var(--warm)}
-#countryModal .arrow{font-style:normal;color:var(--dim);font-size:8px}
-#countryModal .score{position:relative;height:6px;background:linear-gradient(90deg,#ffb040,var(--track) 50%,#ff4060);border-radius:3px;margin:4px 0}
-#countryModal .score i{position:absolute;top:-3px;width:2px;height:12px;background:var(--bright);margin-left:-1px}
-#countryModal .war{margin-top:6px;padding-top:6px;border-top:1px solid #ffffff0c}
-#countryModal .news .wire-row{padding:3px 4px;cursor:pointer}
-#countryModal .spark{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
-#countryModal .spark-item .lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)} #countryModal .spark-item .lbl b{color:var(--bright)}
-#countryModal .spark svg{width:100%;height:44px;display:block;background:var(--inset);border-radius:6px}
-@media (max-width:640px){#countryModal .sections,#countryModal .spark{grid-template-columns:1fr} #countryModal .vitals{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:480px){#countryModal .bar #cmExpand{display:none} #countryModal .vitals{gap:4px}}
