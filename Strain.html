@@ -1,0 +1,322 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Entity</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="css/strain.css">
+</head>
+<body>
+
+<div id="entityHeader">
+  <div id="viewToggle">
+    <button id="viewBench" class="on" title="Bench (B)">🔬 Bench</button>
+    <button id="viewMap" title="Map (M)">🌍 Map</button>
+  </div>
+  <div id="playerPanel">
+    <span>💰 <span class="money" id="moneyDisplay">500</span></span>
+    <span title="Scrutiny: the baseline attention your title attracts.">
+      🎓 <span class="base" id="scrutinyFloorDisplay">10</span>%
+    </span>
+    <span title="Suspicion: transient heat from your own operations. Reaches 100% and you are busted.">
+      🔍 <span class="scrut" id="suspicionDisplay">0</span>%
+      <span class="bar"><span class="fill" id="suspicionFill" style="width:0%"></span></span>
+    </span>
+    <span class="job" id="jobDisplay">Junior Analyst</span>
+    <span class="cal" id="calDisplay" title="Day 0">1 Jan 2031</span>
+  </div>
+  <div id="actions">
+    <button id="careerBtn" class="accent">📊 Career</button>
+    <button id="variantToggle" title="Variant storage">🧩 Variants</button>
+    <span class="sep"></span>
+    <button id="saveBtn" title="Save">💾<span> Save</span></button>
+    <button id="loadBtn" title="Load">📁<span> Load</span></button>
+    <button id="entityTuneBtn" title="Entity tuning">⚙<span> Config</span></button>
+    <button id="newGameBtn" title="New game">🆕<span> New game</span></button>
+  </div>
+</div>
+
+<header>
+  <button id="burger" aria-label="Show controls" aria-expanded="false" aria-controls="drawer">☰</button>
+  <h1>Entity <b>Bench</b></h1>
+  <div id="drawer">
+    <div id="transport">
+      <button id="play">Pause</button>
+      <button id="tunebtn" title="Live tuning — every lever, every plate">Tune</button>
+      <select id="speed" aria-label="Simulation speed">
+        <option value="1">1×</option>
+        <option value="2">2×</option>
+        <option value="4" selected>4×</option>
+        <option value="8">8×</option>
+      </select>
+    </div>
+    <div id="tools"></div>
+  </div>
+</header>
+
+<div id="plateTabs" role="tablist" aria-label="Plate"></div>
+
+<div id="main">
+  <div id="left">
+    <div id="bench"></div>
+    <footer>
+      <span id="hint"></span>
+      <pre id="tile"><span><i>hover a plate to read the medium</i></span></pre>
+      <span id="carry">carrying <b>nothing</b></span>
+    </footer>
+  </div>
+</div>
+
+<div id="pop"></div>
+
+<!-- ── Dialogs ──────────────────────────────────────────────────────
+     Every overlay is a .modal holding a .win; inside, an optional .bar
+     (title row), a scrolling .body and an optional .foot.  Open/close
+     wiring lives in js/ui.js. -->
+
+<div id="sheet" class="modal">
+  <div class="win">
+    <div class="bar"><h2>Profile</h2><button id="close">Close</button></div>
+    <div id="sheetbody" class="body"></div>
+    <div id="sheetfoot" class="foot"></div>
+  </div>
+</div>
+
+<div id="tune" class="modal">
+  <div class="win">
+    <div class="bar"><h2>Live tuning</h2>
+      <input id="tunefind" type="search" placeholder="filter… e.g. Bloom, specialty, FEEDERS" autocomplete="off">
+      <span id="tunecount"></span>
+      <button id="tuneexport" title="Copy every changed lever">Export changes</button>
+      <button id="tuneexportall" title="Copy the complete lever set">Export all</button>
+      <button id="tuneimport" title="Paste an exported block">Import</button>
+      <button id="tuneclose">Close</button></div>
+    <textarea id="tuneio" spellcheck="false" placeholder="exported levers appear here"></textarea>
+    <div id="tunebody" class="body"></div>
+    <div id="tunefeed" title="live estimate from the feeder levers"></div>
+  </div>
+</div>
+
+<div id="variantModal" class="modal">
+  <div class="win">
+    <div class="bar" id="variantBar">
+      <h2>🧩 Variant storage</h2>
+      <span class="badge" id="variantCount">0 / 8</span>
+      <button id="variantClose">Close</button>
+    </div>
+    <div id="variantHint">
+      <button class="close" id="variantHintClose">✕</button>
+      <b>Welcome to variant storage.</b>
+      <p>A variant is a preserved profile — archived straight off the bench. Place one back on a plate, or deploy it to the map to begin coverage.</p>
+      <ul>
+        <li><em>🧩 Collect</em> archives the entity you are inspecting (costs money and scrutiny) and <b>consumes it</b> — the entity is removed from the plate. A landlord and its tenant are collected together as one pair, and both are consumed.</li>
+        <li><em>🔬 Place</em> sets a variant back down on a bench plate, energy and all.</li>
+        <li><em>📋 Replicate</em> copies a variant at reduced potency.</li>
+        <li><em>🌍 Deploy</em> seeds a country on the world map. The variant degrades.</li>
+        <li><em>💰 Sell</em> trades a variant for money — but the responders will take note.</li>
+      </ul>
+      <p>Below, <b>open research projects</b> offer rewards for variants matching specific traits.</p>
+    </div>
+    <div id="variantList"></div>
+    <div id="bountySection">
+      <div class="bounty-head">
+        <span>📋 Open research projects</span>
+        <button id="bountyRefresh" title="Request new proposals">↻</button>
+      </div>
+      <div id="bountyList"></div>
+    </div>
+    <div class="variant-foot">
+      <button id="variantExpand">⬆ Expand storage</button>
+    </div>
+  </div>
+</div>
+
+<div id="careerModal" class="modal">
+  <div class="win">
+    <div class="bar"><h2>Career</h2><button id="careerClose">Close</button></div>
+    <div class="body" id="careerBody"></div>
+  </div>
+</div>
+
+<div id="offerModal" class="modal">
+  <div class="win">
+    <h2 id="offerTitle"></h2>
+    <div class="offer-from" id="offerFrom"></div>
+    <div class="offer-row" id="offerRow"></div>
+    <p class="offer-note" id="offerNote"></p>
+    <div class="offer-foot">
+      <button class="danger" id="offerDecline">Decline</button>
+      <button class="good"   id="offerAccept">Accept</button>
+    </div>
+  </div>
+</div>
+
+<div id="deliverModal" class="modal">
+  <div class="win">
+    <div class="bar">
+      <h2 id="deliverTitle">Fulfil request</h2>
+      <button id="deliverClose">Close</button>
+    </div>
+    <div class="body" id="deliverBody"></div>
+    <div class="foot" id="deliverFoot"></div>
+  </div>
+</div>
+
+<div id="mapView">
+  <svg id="mapSvg" aria-label="World map"></svg>
+  <button id="mapBack">← Back to bench</button>
+  <div id="mapTitle">World <b>Map</b> · Mercator</div>
+  <div id="mapCount"></div>
+  <div id="mapTooltip"></div>
+  <div id="mapStatus">loading map…</div>
+  <div id="responseBar">
+    <span class="label">📊 Response</span>
+    <div class="track"><div class="fill" id="responseFill"></div></div>
+    <span class="pct" id="responsePct">0.0%</span>
+  </div>
+  <div id="mapLegend">
+    <div class="layers">
+      <button data-layer="coverage" class="on">Coverage</button><button data-layer="stability">Stability</button>
+      <button data-layer="economy">Economy</button><button data-layer="supply">Supply</button>
+      <button data-layer="conflict">Conflict</button><button data-layer="legitimacy">Legitimacy</button>
+    </div>
+    <div class="layers">
+      <button data-layer="technology">Technology</button><button data-layer="infrastructure">Infrastructure</button>
+      <button data-layer="military">Military</button><button data-layer="academia">Academia</button>
+      <button data-layer="medical">Medical</button><button data-layer="population">Population</button><button data-layer="endowment">Endowment</button>
+    </div>
+    <div class="grad" id="mapGrad" hidden><span class="lo">0</span><i></i><span class="hi">100</span></div>
+    <div class="row"><span class="dot" style="background:var(--land)"></span> Clean</div>
+    <div class="row"><span class="dot" style="background:var(--lv1)"></span> Low</div>
+    <div class="row"><span class="dot" style="background:var(--lv2)"></span> Moderate</div>
+    <div class="row"><span class="dot" style="background:var(--lv3)"></span> High</div>
+    <div class="row"><span class="dot" style="background:var(--lv4)"></span> Surge</div>
+    <div class="prices" id="mapPrices" title="world prices on the exchange"></div>
+  </div>
+  <div id="mapControls">
+    <button id="mapZoomIn"  title="Zoom in">+</button>
+    <button id="mapZoomOut" title="Zoom out">−</button>
+    <button id="mapReset"   title="Reset view">⟲</button>
+  </div>
+  <aside id="mapWire" aria-label="News wire">
+    <div class="wire-bar">
+      <h2>Wire</h2>
+      <div class="wire-filters">
+        <button data-filter="all" class="on">All</button><button data-filter="large">Major</button><button data-filter="massive">World</button>
+      </div>
+      <button id="wireToggle" title="Collapse the wire">›</button>
+    </div>
+    <div id="wireList"></div>
+  </aside>
+</div>
+
+<div id="countryModal" class="modal">
+  <div class="win">
+    <div class="bar">
+      <span class="sw" id="cmSw"></span>
+      <h3 id="cmName">Country</h3>
+      <span class="iso" id="cmIso">—</span>
+      <span id="cmRegion"></span>
+      <button class="small" id="cmExpand" title="Expand all — open every section, or collapse them all">Expand all</button>
+      <button id="cmClose">Close</button>
+    </div>
+    <div class="body" id="cmBody"></div>
+  </div>
+</div>
+
+<div id="mapRegionModal" class="modal">
+  <div class="win">
+    <div class="bar">
+      <span class="sw" id="regSw"></span>
+      <h3 id="regName">Region</h3>
+      <button id="regClose">Close</button>
+    </div>
+    <div class="body" id="regBody"></div>
+  </div>
+</div>
+
+<div id="askModal" class="modal">
+  <div class="win">
+    <p id="askText"></p>
+    <div class="row">
+      <button id="askCancel">Cancel</button>
+      <button id="askOk" class="good">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="deployModal" class="modal">
+  <div class="win">
+    <div class="bar">
+      <h2>🌍 Deploy variant</h2>
+      <button id="deployClose">Close</button>
+    </div>
+    <div class="body">
+      <label for="deployVariant">Variant</label>
+      <select id="deployVariant"></select>
+      <div class="variant-sum" id="deploySummary"></div>
+      <label>Target country</label>
+      <div class="target" id="deployTarget"></div>
+      <div class="cost" id="deployCost"></div>
+    </div>
+    <div class="foot">
+      <button id="deployCancel">Cancel</button>
+      <button id="deployConfirm" class="danger" disabled>Deploy</button>
+    </div>
+  </div>
+</div>
+
+<div id="entityTune" class="modal">
+  <div class="win">
+    <div class="bar">
+      <h2>⚙ Entity tuning</h2>
+      <button id="entityTuneClose">Close</button>
+    </div>
+    <div class="body" id="entityTuneBody"></div>
+  </div>
+</div>
+
+<div id="gameOverModal" class="modal">
+  <div class="win">
+    <div class="icon">🔴</div>
+    <h2>Busted</h2>
+    <p>The responders caught you. Your lab is seized, your samples confiscated, your research career in ruins.</p>
+    <div class="stats" id="goStats"></div>
+    <button id="goRestart" class="good">🔄 Start over</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Load order matters.  boot starts the topojson preload; core defines C;
+     worker carries the life step as source; ui provides the shared helpers.
+     sheet precedes host (which opens it); tune follows host (it reads
+     ENTITY_PLATES, set on host's last line).  geo, bounties and world must
+     precede shell, which assembles window.ENTITY from them at load; worldui
+     follows shell (it needs ENTITY) and precedes map (which calls it only on
+     a click).  layout fits the bench last, once everything it measures exists. -->
+<script src="js/boot.js"></script>
+<script src="js/core.js"></script>
+<script src="js/worker.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/sheet.js"></script>
+<script src="js/host.js"></script>
+<script src="js/tune.js"></script>
+<script src="js/data.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/countries.js"></script>
+<script src="js/bounties.js"></script>
+<script src="js/world.js"></script>
+<script src="js/economy.js"></script>
+<script src="js/links.js"></script>
+<script src="js/gov.js"></script>
+<script src="js/decide.js"></script>
+<script src="js/events.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/worldui.js"></script>
+<script src="js/country.js"></script>
+<script src="js/wire.js"></script>
+<script src="js/map.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/layout.js"></script>
+</body>
+</html>

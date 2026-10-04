@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Strain: open Strain.html",
+      "type": "chrome",
+      "request": "launch",
+      "file": "${workspaceFolder}/Strain.html",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Strain: local server",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "serve",
+      "url": "http://127.0.0.1:8000/Strain.html",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}
