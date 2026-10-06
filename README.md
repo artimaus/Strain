@@ -74,7 +74,7 @@ scrollbars at nine window sizes. It takes about half a minute.
 | `js/map.js` | The world map: topojson decoding, Mercator, borders and coastlines, layers, tooltip, pan and zoom. |
 | `js/progression.js` | Career offers, research projects, save and load, game over, new game. |
 | `js/boot.js` | The debug flag and the map data preload. |
-| `tools/smoke.py` | The headless test. `tools/serve.py` is the dev server; `tools/probes/` holds eval scripts for the test. |
+| `tools/smoke.py` | The headless test. `tools/serve.py` is the dev server; `tools/census.py` runs the census probe over seeds; `tools/probes/` holds the eval scripts. |
 | `docs/` | The documentation, below. |
 
 Scripts load in a fixed order (the comment at the end of `Strain.html`

@@ -351,6 +351,58 @@ POST = """<script>
       }, 50);
     } catch (e) { r.modals.saveLoadRestores = false; r.modals.saveLoadError = String(e); done(); }
   }
+  // Phase 0 foundations (docs/design.md §10): the pillar registry and its
+  // order, the ledger and its history, per-pillar random streams, pillar
+  // fields in the save.  Two test pillars are registered and removed again.
+  function foundations(done) {
+    at("foundations");
+    try {
+      var W = window.WORLD, ran = [], draws = [];
+      var econ = { name: "economy", label: "Test economy", fields: [["tz", "tz", 0]],
+        daily: function (iso, rng, L) { if (iso === "FR") { ran.push("economy"); draws.push(rng()); L.add("economy", "economy.x", "x", W.day, "u"); } },
+        rows: function (iso, L) { return [["x", L.get("economy.x")]]; } };
+      var rel = { name: "relations", label: "Test relations",
+        daily: function (iso, rng, L) { if (iso === "FR") ran.push("relations"); } };
+      W.registerPillar(rel); W.registerPillar(econ);
+      var fr = W.ensureCountry("FR");
+      r.modals.pillarFields = fr.tz === 0 && W.COUNTRY_FIELDS.some(function (f) { return f[0] === "tz"; });
+      W.newWorld(4242); W.advanceDays(3);
+      r.modals.pillarOrder = ran.join(",") === "economy,relations,economy,relations,economy,relations";
+      var L = W.ledgerOf("FR");
+      r.modals.ledgerToday = L.day === W.day && L.get("economy.x") === W.day && L.of("economy").length === 1 && W.ledgerOf("DE").get("economy.x") === 0;
+      var d1 = draws.slice(); ran = []; draws = [];
+      W.newWorld(4242); W.advanceDays(3);
+      r.modals.rngRepeatable = d1.length === 3 && d1.every(function (v, i) { return v === draws[i] && v >= 0 && v < 1; });
+      W.newWorld(4343); W.advanceDays(3);
+      r.modals.rngSeeded = !d1.every(function (v, i) { return v === draws[3 + i]; });
+      W.advanceDays(100);
+      var h = W.history("FR", "economy.x");
+      r.modals.historyRing = h.length === W.HISTORY_DAYS && h[h.length - 1] === W.day && h[0] === W.day - W.HISTORY_DAYS + 1;
+      // the card: a section per pillar that offers rows, its open state remembered
+      window.ENTITY.openCountryModal("FR");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="economy"]');
+      r.modals.cardSections = !!det && det.querySelector(".row") !== null && $("cmBody").querySelectorAll("details.pillar").length === 1;
+      esc();
+      // the save: a pillar field rides in the pack table, version 9
+      fr = W.ensureCountry("FR"); fr.tz = 5;
+      $("saveBtn").click();
+      var saved = JSON.parse(localStorage.getItem("entity_save_v3") || "null");
+      r.modals.saveV9 = !!saved && saved.v === 9 && saved.countries.FR.tz === 5;
+      W.newWorld();
+      var fr0 = W.ensureCountry("FR").tz;
+      $("loadBtn").click();
+      setTimeout(function () {
+        var ok = $("askOk"); if (ok) ok.click();
+        setTimeout(function () {
+          r.modals.pillarFieldLoads = fr0 === 0 && W.ensureCountry("FR").tz === 5;
+          localStorage.removeItem("entity_save_v3");
+          W.unregisterPillar("economy"); W.unregisterPillar("relations");
+          W.newWorld();
+          done();
+        }, 150);
+      }, 50);
+    } catch (e) { r.modals.pillarOrder = false; r.modals.foundationsError = String(e); done(); }
+  }
   // --eval: wait for the map (links need it), run the caller's code with the
   // result object as `r`, and store what it returns (a promise is awaited).
   function evalRun() {
@@ -375,7 +427,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { saveLoad(finish); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { saveLoad(finish); }); }); }); });
   });
 })();
 </script>

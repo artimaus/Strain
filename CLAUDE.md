@@ -22,6 +22,11 @@ bench simulation and the name the code uses for its globals.
   run after load.
 - The script order at the end of `Strain.html` is load-bearing; the
   comment above it says why. New scripts go there, in order.
+- Map-side pillars (`docs/design.md` §10, `docs/nations.md` §0) are
+  modules that call `WORLD.registerPillar` at load; they go after
+  `js/links.js` and before `js/shell.js`. A pillar brings its save
+  fields, its config group, its card rows, its census line and writes
+  its day to the nation's ledger. Census: `python tools/census.py`.
 - Docs: `README.md` (overview, run, test, file map); `docs/bench.md`,
   `docs/map.md`, `docs/player.md` describe what exists; `docs/design.md`
   and `docs/plan.md` describe what is being built. Update the reference

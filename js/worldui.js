@@ -79,6 +79,7 @@ function renderCountry() {
   ];
   $("cmBody").innerHTML = rows.map(([k, v]) => row(k, esc(v))).join("")
     + (neighbours.length ? `<div class="traits">Borders: <b>${esc(neighbours.join(", "))}</b></div>` : "")
+    + pillarSections(iso)
     + `<div class="country-btns">`
     + `<button id="cmDeploy" class="danger"${agent ? "" : " disabled"}>🌍 Deploy variant</button>`
     + (region ? `<button id="cmRegionBtn">Region · ${esc(REGION_NAME[region])}</button>` : "")
@@ -91,8 +92,40 @@ function renderCountry() {
   };
   const rb = $("cmRegionBtn");
   if (rb) rb.onclick = () => openRegionModal(region);
+  $("cmBody").querySelectorAll("details.pillar").forEach(d => d.addEventListener("toggle", () => {
+    if (d.open) openSet.add(d.dataset.pillar); else openSet.delete(d.dataset.pillar);
+    rememberOpen();
+  }));
 }
 $("cmClose").onclick = () => countryModal.close();
+
+/* Pillar sections: one fold-out per registered pillar that offers card
+   rows, filled from today's ledger; which are open is remembered across
+   countries and sessions.  While the card is open it follows the day. */
+const OPEN_KEY = "entity_card_open";
+let openSet = new Set();
+try { openSet = new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]")); } catch (e) {}
+function rememberOpen() { try { localStorage.setItem(OPEN_KEY, JSON.stringify([...openSet])); } catch (e) {} }
+function pillarSections(iso) {
+  const L = W.ledgerOf(iso);
+  return W.pillarList().filter(p => typeof p.rows === "function").map(p => {
+    let rows = [];
+    try { rows = p.rows(iso, L) || []; } catch (e) { rows = [["error", String(e)]]; }
+    const body = rows.length
+      ? rows.map(([k, v, note]) => `<div class="row"><span class="k">${esc(k)}</span><span class="v">${esc(v)}${note ? ` <small class="faint">${esc(note)}</small>` : ""}</span></div>`).join("")
+      : `<div class="faint">nothing yet</div>`;
+    return `<details class="pillar" data-pillar="${p.name}"${openSet.has(p.name) ? " open" : ""}>`
+      + `<summary>${esc(p.label || p.name)}</summary><div class="sec">${body}</div></details>`;
+  }).join("");
+}
+let refreshDue = 0;
+addEventListener("entity:day", () => {
+  if (!countryModal.isOpen || !cardIso) return;
+  const t = performance.now();
+  if (t < refreshDue) return;
+  refreshDue = t + 1000;
+  renderCountry();
+});
 
 /* ── Deploy dialog ─────────────────────────────────────────────── */
 const deployState = { variant: null, iso2: null };

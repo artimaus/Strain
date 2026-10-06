@@ -372,14 +372,14 @@ Owner: `js/progression.js`.
 ### What it does
 
 **Save.** One key in localStorage, `entity_save_v3`, holding JSON
-version 8:
+version 9:
 
 ```
-{ v: 8, t,
+{ v: 9, t,
   world:     { seed, day, log },                 // WORLD.packWorld()
   player:    { money, scrutiny, job, salary, scrutinyFloor, promoStreak,
                lateralStreak, notoriety, careerHistory, variants, maxVariants },
-  countries: { iso: { c, lv, pr } },             // WORLD.packAll()
+  countries: { iso: { c, lv, pr, ...pillar fields } },   // WORLD.packAll()
   bounties:  [ { id, name, desc, university, D, tier, money, notoriety,
                  scrutinyBump, expiryTicks, ticksLeft, clauseKeys } | null ×3 ] }
 ```
@@ -387,9 +387,10 @@ version 8:
 The Save button writes it with a toast; the tick autosaves silently
 every 30 s. The bench plates are not saved.
 
-**Load.** The Load button confirms, then accepts versions 2 to 8. A v8
-save makes a fresh world on the saved seed and unpacks the world and
-the countries over it. Older saves (v2 to v7) get a new world with only
+**Load.** The Load button confirms, then accepts versions 2 to 9. A v8
+or v9 save makes a fresh world on the saved seed and unpacks the world
+and the countries over it (a v8 save has no pillar fields; they take
+their defaults). Older saves (v2 to v7) get a new world with only
 their coverage (`c`, `lv`, `pr`) laid over it, because the fields that
 the old nation simulation wrote no longer exist. A v2 save has no
 career fields and resets to the junior baseline. Projects are rebuilt

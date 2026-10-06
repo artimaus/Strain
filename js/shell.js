@@ -48,6 +48,18 @@ const W = window.WORLD;
 const { COUNTRY_STATE, regionMembers, regionAgg, anyCovered,
         onWorldMapReady, installMapSync, syncMapColors } = W;
 
+/* Pillar levers (docs/design.md §10): each pillar's config defaults join
+   ENTITY_CONFIG, and its rows become a group of the config panel.  The
+   pillars load before this file; a late one is picked up when the panel
+   is next built. */
+function mergePillarConfig() {
+  for (const p of W.pillarList()) {
+    const d = p.config && p.config.defaults;
+    if (d) for (const k in d) if (!(k in ENTITY_CONFIG)) ENTITY_CONFIG[k] = d[k];
+  }
+}
+mergePillarConfig();
+
 function updateEntityUI() {
   $("moneyDisplay").textContent = Math.round(player.money);
   $("scrutinyFloorDisplay").textContent = Math.round(player.scrutinyFloor);
@@ -253,6 +265,9 @@ function buildEntityTune() {
     ["World clock", [["dayMs","real ms per day at 1x","ms"],["maxCatchup","max days per tick","count"],
       ["logCap","news log length","count"]]],
   ];
+  mergePillarConfig();
+  for (const p of W.pillarList())
+    if (p.config && p.config.rows && p.config.rows.length) groups.push([p.config.group || p.label || p.name, p.config.rows]);
   body.innerHTML = groups.map(([title, rows]) =>
     `<h4>${title}</h4>` + rows.map(([k, label, unit]) =>
       `<div class="row"><span>${label} <small class="faint">(${unit})</small></span>` +

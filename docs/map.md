@@ -322,9 +322,16 @@ times the bench's speed to an accumulator and runs `dayTick()` once per
 `dayMs`, at most `maxCatchup` days per tick, discarding the rest so a
 stalled tab does not bank days. The clock stops when the bench is
 paused or halted and while the tab is hidden. `dayTick()` increments
-the day and dispatches `entity:day` with the day number and its date;
-nothing else happens in a day yet. Dates start at 1 January 2031
-(`fmtDate`). `advanceDays(n)` runs n days at once, for tests.
+the day, runs every registered pillar in order (below), closes the
+ledgers and dispatches `entity:day` with the day number and its date.
+Dates start at 1 January 2031 (`fmtDate`). `advanceDays(n)` runs n days
+at once, for tests.
+
+**Pillars, ledgers, streams, census.** The modules that run a nation's
+day register with `registerPillar` and run in `ORDER`; each writes to
+the nation's ledger for the day, keeps a 90-day history of its sums,
+draws from its own seeded stream, and feeds the card, the config panel
+and the census. All of this is described in `nations.md` §0.
 
 **The map hand-off.** `onWorldMapReady(handle, geo)` keeps the handle
 (as `WORLD.worldMap`), takes the names, seeds and prunes the states,
@@ -338,8 +345,9 @@ maps each country field to its short name in the save and a default:
 `covered → c`, `coverageLevel → lv`, `profile → pr`. `WORLD_FIELDS`
 does the same for `day` and `log`; the seed rides beside them.
 `packAll()` / `unpackAll()` and `packWorld()` / `unpackWorld()` are the
-whole save and load of the map side; a new field is one row in a table.
-A saved value of the wrong shape falls back to its default.
+whole save and load of the map side; a new field is one row in a table,
+and a pillar's `fields` are appended to the country table when it
+registers. A saved value of the wrong shape falls back to its default.
 
 ### What it touches
 

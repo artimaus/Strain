@@ -375,14 +375,14 @@ function init() {
     S.updateEntityUI();
   };
 
-  // ── Save / load v8 ───────────────────────────────────────────────────────
+  // ── Save / load v9 ───────────────────────────────────────────────────────
   // Country and world blocks come from js/world.js's pack table; a field
   // added there is saved here without any change to this file.
   const SAVE_KEY = "entity_save_v3";
   const W = window.WORLD;
   function serialize() {
     return {
-      v: 8, t: Date.now(),
+      v: 9, t: Date.now(),
       world: W.packWorld(),
       player: {
         money: player.money, scrutiny: player.scrutiny, job: player.job,
@@ -426,7 +426,7 @@ function init() {
     let data;
     try { data = JSON.parse(raw); }
     catch (e) { toast("Save corrupted."); return false; }
-    if (!data || !(data.v >= 2 && data.v <= 8)) {
+    if (!data || !(data.v >= 2 && data.v <= 9)) {
       toast("Save version mismatch — cannot load.");
       return false;
     }
@@ -460,8 +460,9 @@ function init() {
       player.careerHistory = [];
     }
 
-    if (data.v === 8) {
-      // Fresh world on the saved seed, then the saved state over it.
+    if (data.v >= 8) {
+      // Fresh world on the saved seed, then the saved state over it.  A v8
+      // save predates the pillar rows, which take their defaults.
       W.newWorld(data.world && data.world.seed);
       W.unpackWorld(data.world);
       if (data.countries) W.unpackAll(data.countries);
