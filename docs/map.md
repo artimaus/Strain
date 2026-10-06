@@ -82,9 +82,12 @@ stylesheet colours; the only band layer today is **coverage**, cut at
 A *stat view* reads a value in 0..1 and sets an exact fill between two
 colours inline, with a ramp in the legend; the only stat view is
 **population**, from `DATA.popOf`, on a log scale from 1 M to 1 B.
+Every pillar's `layers` join the stat views at map load, each with a
+legend button (the economy brings Econ, Tech and Strain; `nations.md`).
 `setLayer(name)` switches, updates the legend rows or ramp, and
 repaints; the repaint closure walks `ENTITY.COUNTRY_STATE` and calls
-`setValue(iso, v)` per country.
+`setValue(iso, v)` per country. The tooltip shows the active stat
+view's value for the hovered country.
 
 **Tooltip.** Hovering a shape or marker highlights every element of
 that country and shows its name, code, region line (region name,

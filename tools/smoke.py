@@ -358,30 +358,31 @@ POST = """<script>
     at("foundations");
     try {
       var W = window.WORLD, ran = [], draws = [];
-      var econ = { name: "economy", label: "Test economy", fields: [["tz", "tz", 0]],
-        daily: function (iso, rng, L) { if (iso === "FR") { ran.push("economy"); draws.push(rng()); L.add("economy", "economy.x", "x", W.day, "u"); } },
-        rows: function (iso, L) { return [["x", L.get("economy.x")]]; } };
+      // the test pillars take the empty trade and relations slots; the real economy keeps its own
+      var trade = { name: "trade", label: "Test trade", fields: [["tz", "tz", 0]],
+        daily: function (iso, rng, L) { if (iso === "FR") { ran.push("trade"); draws.push(rng()); L.add("trade", "trade.x", "x", W.day, "u"); } },
+        rows: function (iso, L) { return [["x", L.get("trade.x")]]; } };
       var rel = { name: "relations", label: "Test relations",
         daily: function (iso, rng, L) { if (iso === "FR") ran.push("relations"); } };
-      W.registerPillar(rel); W.registerPillar(econ);
+      W.registerPillar(rel); W.registerPillar(trade);
       var fr = W.ensureCountry("FR");
       r.modals.pillarFields = fr.tz === 0 && W.COUNTRY_FIELDS.some(function (f) { return f[0] === "tz"; });
       W.newWorld(4242); W.advanceDays(3);
-      r.modals.pillarOrder = ran.join(",") === "economy,relations,economy,relations,economy,relations";
+      r.modals.pillarOrder = ran.join(",") === "trade,relations,trade,relations,trade,relations";
       var L = W.ledgerOf("FR");
-      r.modals.ledgerToday = L.day === W.day && L.get("economy.x") === W.day && L.of("economy").length === 1 && W.ledgerOf("DE").get("economy.x") === 0;
+      r.modals.ledgerToday = L.day === W.day && L.get("trade.x") === W.day && L.of("trade").length === 1 && W.ledgerOf("DE").get("trade.x") === 0;
       var d1 = draws.slice(); ran = []; draws = [];
       W.newWorld(4242); W.advanceDays(3);
       r.modals.rngRepeatable = d1.length === 3 && d1.every(function (v, i) { return v === draws[i] && v >= 0 && v < 1; });
       W.newWorld(4343); W.advanceDays(3);
       r.modals.rngSeeded = !d1.every(function (v, i) { return v === draws[3 + i]; });
       W.advanceDays(100);
-      var h = W.history("FR", "economy.x");
+      var h = W.history("FR", "trade.x");
       r.modals.historyRing = h.length === W.HISTORY_DAYS && h[h.length - 1] === W.day && h[0] === W.day - W.HISTORY_DAYS + 1;
       // the card: a section per pillar that offers rows, its open state remembered
       window.ENTITY.openCountryModal("FR");
-      var det = $("cmBody").querySelector('details.pillar[data-pillar="economy"]');
-      r.modals.cardSections = !!det && det.querySelector(".row") !== null && $("cmBody").querySelectorAll("details.pillar").length === 1;
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="trade"]');
+      r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="relations"]');
       esc();
       // the save: a pillar field rides in the pack table, version 9
       fr = W.ensureCountry("FR"); fr.tz = 5;
@@ -396,12 +397,46 @@ POST = """<script>
         setTimeout(function () {
           r.modals.pillarFieldLoads = fr0 === 0 && W.ensureCountry("FR").tz === 5;
           localStorage.removeItem("entity_save_v3");
-          W.unregisterPillar("economy"); W.unregisterPillar("relations");
+          W.unregisterPillar("trade"); W.unregisterPillar("relations");
           W.newWorld();
           done();
         }, 150);
       }, 50);
     } catch (e) { r.modals.pillarOrder = false; r.modals.foundationsError = String(e); done(); }
+  }
+  // Phase 1: the economy pillar (docs/nations.md §1) runs, feeds, repeats
+  // on a seed, shows on the card, the map and the wire, and reaches the
+  // census and the config.
+  function economy(done) {
+    at("economy");
+    try {
+      var W = window.WORLD;
+      r.modals.economyRegistered = !!window.ECONOMY && W.pillarList().some(function (p) { return p.name === "economy"; });
+      W.newWorld(9001); W.advanceDays(45);
+      var fr = W.COUNTRY_STATE.FR, L = W.ledgerOf("FR");
+      r.modals.economyRuns = !!fr && fr.pop > 60 && L.get("economy.income") > 0 && L.get("economy.captured.food") > 0 && fr.ceil[0] > 0 && fr.tech > 0;
+      r.modals.economyFeeds = L.get("economy.famine") === 0 && W.ledgerOf("SG").get("economy.famine") > 0;
+      r.modals.economyReasons = typeof fr.reason === "string" && fr.reason.length > 0 && L.of("economy").some(function (l) { return l.reason; });
+      r.modals.economyCensus = typeof W.censusOf("FR").tech === "number" && typeof W.censusWorld().famineNations === "number";
+      var t1 = fr.treasury, p1 = fr.pop;
+      W.newWorld(9001); W.advanceDays(45);
+      r.modals.economyRepeats = W.COUNTRY_STATE.FR.treasury === t1 && W.COUNTRY_STATE.FR.pop === p1;
+      r.modals.economyConfig = typeof window.ENTITY_CONFIG.capturePerWorker === "number";
+      var eb = document.querySelector('#mapLegend .layers button[data-layer="economy"]'), tb = document.querySelector('#mapLegend .layers button[data-layer="technology"]');
+      r.modals.economyLayers = !!eb && !!tb && !!document.querySelector('#mapLegend .layers button[data-layer="strain"]');
+      if (tb) {
+        tb.click();
+        r.modals.economyLayerPaints = !$("mapGrad").hidden && [].some.call(document.querySelectorAll("#mapSvg .country"), function (p) { return p.style.fill; });
+        document.querySelector('#mapLegend .layers button[data-layer="coverage"]').click();
+      }
+      window.ENTITY.openCountryModal("FR");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="economy"]');
+      r.modals.economyCard = !!det && det.querySelectorAll(".row").length >= 8;
+      esc();
+      r.modals.economyWire = W.WORLD_STATE.log.some(function (e) { return e.kind === "economy"; });
+      W.newWorld();
+      done();
+    } catch (e) { r.modals.economyRuns = false; r.modals.economyError = String(e); done(); }
   }
   // --eval: wait for the map (links need it), run the caller's code with the
   // result object as `r`, and store what it returns (a promise is awaited).
@@ -427,7 +462,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { saveLoad(finish); }); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { saveLoad(finish); }); }); }); }); });
   });
 })();
 </script>

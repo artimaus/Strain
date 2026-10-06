@@ -68,6 +68,7 @@ scrollbars at nine window sizes. It takes about half a minute.
 | `js/bounties.js` | The research-project generator. |
 | `js/world.js` | Per-country coverage, the world clock, the map hand-off, regions, the news log, the save tables. |
 | `js/links.js` | The land, sea and air graph with a capacity per edge. |
+| `js/economy.js` | The economy pillar: a nation's day, its card rows, map layers, wire headlines and census line. |
 | `js/shell.js` | The player, titles, variants, the view switch, the config panel, `window.ENTITY`. |
 | `js/worldui.js` | The country card, the region dialog, the deploy dialog. |
 | `js/wire.js` | The calendar readout and the news panel on the map. |

@@ -235,7 +235,70 @@ the exploration rate are fixed constants in the first version, named
 in the code and listed in the reference doc. Tuning may promote one
 to a lever, with a note here saying what it needed to move for.
 
-### 4.7 Assumptions built in
+### 4.7 As built: the phase 1 round, 5 October 2026
+
+The round opened on a prototype of §4.3 run on the real rows and the
+map's areas (France, the United States, Nigeria, Bangladesh, Singapore
+over three years; a calibration sweep over all 194 nations). Decisions:
+
+- **Reserve ceilings.** Food by population (`endowment/100 × pop`);
+  energy and materials by `endowment/100 × area^0.25`; each resource
+  scaled so the world's ceilings sum to 1.5 times its starting need.
+  The sweep: area^0.25 leaves 41 nations past their energy ceiling at
+  the start, area^0.5 leaves 85, area^0.75 leaves 115; food by area
+  starves 47 more than food by population. About 21 nations with no
+  reserves (city states, islands, Gulf states) depend on trade from
+  day one and are in famine until phase 2.
+- **Tempo.** Building costs set so a nation with nothing pressing
+  grows its development about 20% a year: 35,000 money and 350
+  materials per unit of infrastructure, 26,000 per unit of economy.
+- **Labour order.** Academia last, as designed. Known consequence:
+  once the economy can absorb everyone, nobody researches and
+  technology stalls in developed nations. To be mitigated by later
+  pillars' resource and budget sinks that keep the economy in check,
+  not by reordering.
+- **Hoards.** Kept. Income past the spending cap accumulates; the
+  treasury is the trade fund and the war chest.
+
+Departures from §4.3 found necessary by the prototype, all now in
+`nations.md` §1:
+
+- The idle grow 0.6 food per million a day for themselves; without it
+  poor nations starve on day one for want of infrastructure slots.
+- Labour aims at a 10% food margin after energy and materials, so a
+  surplus exists for births; the base need comes first.
+- Research is per head: `researchRate × (researchers / pop)`, so a
+  small nation can sit at the frontier; a big one does not out-research
+  it by size alone.
+- Exploration spends only when a resource is past its ceiling, on that
+  resource; otherwise its share waits in the treasury.
+- Technology's multipliers clamp at level 100; research slows as
+  `1 / (1 + tech / techSlow)` without bound.
+- The four development numbers get ±5% seeded noise; the treasury
+  starts at 30 days of the cap and the stores at 15 days of use.
+- Rainfall is relative to each zone's own optimum (1 at the start,
+  swinging within the zone's band); a permanent zone penalty was tried
+  and dropped.
+- The budget rule gained two cases: a resource short *and* past 1.5
+  times its ceiling turns the budget to exploration rather than
+  infrastructure, and "nothing pressing" builds (the smaller of the
+  infrastructure and economy shares) rather than researching, since
+  research is bounded by researchers.
+
+**First census** (six seeds, three years, `tools/census.py`, 5 October
+2026): 194 nations; nations in famine 9 in every seed (city states,
+islands, Gulf states: Singapore, Qatar, the Maldives, Malta, Kuwait,
+Djibouti, Bahrain, Andorra, Western Sahara); nations with an unpowered
+economy 13 to 15, India among them in five seeds of six and Japan
+early on, their economies shrinking to what their energy ceilings can
+power; idle share of the world 20%; world income 56,000 to 58,000 a
+day; mean technology 61 to 62. China sits 25 times past its energy
+ceiling and keeps paying by sheer infrastructure; the United States
+and Brazil at about 2; Russia under 0.5. No nation vanished or
+exploded. The pressures the trade phase is meant to answer are all
+visible on the cards.
+
+### 4.8 Assumptions built in
 
 - Reserves are ceilings with diminishing returns, not stocks; nothing
   is ever mined out.

@@ -461,6 +461,9 @@ function featureCentroidLonLat(g) {
                     value: (st, iso) => Math.min(1, Math.log10(Math.max(0, popOf(iso)) + 1) / 3.2),
                     show: (st, iso) => { const p = popOf(iso); return `${p >= 100 ? Math.round(p) : p.toFixed(1)} M`; } },
     };
+    // every pillar's layers (docs/design.md §10) join the stat views, with a legend button each
+    const pillarLayers = [];
+    for (const p of (window.WORLD ? window.WORLD.pillarList() : [])) for (const lay of (p.layers || [])) { STAT_VIEWS[lay.key] = lay; pillarLayers.push(lay); }
     const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
     const rampCache = new Map();
     function ramp(lo, hi, v) {                            // an exact shade between two colours, cached per 1/64 step
@@ -524,7 +527,13 @@ function featureCentroidLonLat(g) {
       }
       if (S && S.syncMapColors) S.syncMapColors();
     }
-    if (legend) legend.querySelectorAll(".layers button").forEach(b => { b.onclick = () => setLayer(b.dataset.layer); });
+    if (legend) {
+      const bar = legend.querySelector(".layers");
+      if (bar) for (const lay of pillarLayers) {
+        const b = document.createElement("button"); b.dataset.layer = lay.key; b.textContent = lay.label; b.title = lay.title || ""; bar.appendChild(b);
+      }
+      legend.querySelectorAll(".layers button").forEach(b => { b.onclick = () => setLayer(b.dataset.layer); });
+    }
 
     const S = window.ENTITY;
     if (S && typeof S.installMapSync === "function") {
@@ -574,6 +583,7 @@ function featureCentroidLonLat(g) {
       const st = S && S.COUNTRY_STATE[iso2];
       const v = st && st.covered ? st.coverageLevel : 0, lv = lvl(v);
       const p = popOf(iso2);
+      const sv = STAT_VIEWS[layer], viewed = sv && sv.show && st ? `<div class="stat">${sv.label} <b>${sv.show(st, iso2)}</b></div>` : "";
       const head = region && S.REGION_IDS.includes(region)
         ? (agg => `<div class="region">${agg.name} · ${agg.covered}/${agg.countries} covered · ${agg.env.temp}°C · ${agg.env.humidity}%</div>`)(S.regionAgg(region))
         : `<div class="region">unassigned region</div>`;
@@ -582,7 +592,8 @@ function featureCentroidLonLat(g) {
         + head
         + `<div class="stat">Coverage <b>${(v * 100).toFixed(1)}%</b></div>`
         + `<div class="bar"><div class="fill" style="width:${v * 100}%${lv ? `;background:var(--lv${lv})` : ""}"></div></div>`
-        + `<div class="stat">Population <b>${p >= 100 ? Math.round(p) : p.toFixed(1)} M</b></div>`;
+        + `<div class="stat">Population <b>${p >= 100 ? Math.round(p) : p.toFixed(1)} M</b></div>`
+        + viewed;
       tip.classList.add("show");
       moveTooltip(ev);
     }
