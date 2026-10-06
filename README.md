@@ -87,4 +87,5 @@ load.
 - [docs/bench.md](docs/bench.md): the Entity model and the bench.
 - [docs/map.md](docs/map.md): the world map, the country data, the links, the world container.
 - [docs/player.md](docs/player.md): the career, variants, research projects, saving.
-- `docs/design.md` and `docs/plan.md`: the redesign of the map side and the phases to build it. Being written.
+- [docs/design.md](docs/design.md): the redesign of the map side: what the map is for, the principles, the nation economy in full, and the open pillars with the questions each phase has to answer.
+- [docs/plan.md](docs/plan.md): the phases that build it, each with its scope, its opening questions and what done means.
