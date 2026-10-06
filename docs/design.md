@@ -316,16 +316,87 @@ Each of these is designed in a question-and-answer round at the start
 of its phase (`plan.md`). The questions below are the ones that have
 to be answered; answers go into this document.
 
-### 5.1 Trade (phase 2)
+### 5.1 Trade (phase 2): as decided, 6 October 2026
 
-- Deals, a market, or both; how a price forms; who may trade with whom
-  (links, capacity from the economy).
-- What travels on the links: goods, people, the variant; how capacity
-  is shared between them.
-- Stores past their cap: sold, wasted, or lent.
-- Debt: who lends, at what cost, what default does.
-- Migration: where the idle and the unhoused go, how fast, what the
-  receiving nation does with them.
+The round's answers, then the mechanics built on them (`nations.md`
+§2 has the formulas and levers).
+
+- **Shape.** One world price per resource plus standing deals. Spot
+  purchases cover today's shortfall at today's price; a shortfall
+  bought from the same seller for a month becomes a deal.
+- **Reach.** Goods move only between linked nations; an edge carries at
+  most its capacity in units a day; a nation trades at most so many
+  units a day per unit of economy, bought and sold together.
+- **Price.** Daily, `price ×= 1 + elasticity × (asks − offers) / (asks +
+  offers)`, bounded between a floor and a ceiling. No base it returns
+  to.
+- **Debt.** None in phase 2. A nation buys what its treasury allows.
+  Lending waits for relations, when lenders can be nations.
+- **Export.** After needs are met, the idle take the spare
+  infrastructure slots and capture the resource that pays best at the
+  world price against its strain, net of the energy it costs. Added
+  after the first census (the idle alone brought 200 units a day to a
+  world needing thousands, since the resource-rich nations have no
+  idle): economy workers move to export while a unit of effort earns
+  more at the world price than a worker makes in the economy, up to 1%
+  of the economy's workers a day, and move back when it stops paying.
+  A nation that went short at home exports nothing that day.
+- **Rationing.** Pro rata by ask: each seller's offer is split among
+  its linked buyers in proportion to what they ask, within each edge's
+  capacity.
+- **Deals.** A fixed amount a day at the price on signing, for a term,
+  delivered before any spot trade; it lapses after a month of
+  non-delivery and runs out at its term.
+- **Comfort.** The store a nation keeps before selling shrinks as the
+  world price rises: `comfortDays / price` days of use. Above it, a
+  share of the excess is offered each day; below it, the gap is bought
+  back over a month.
+- **People.** The idle and the unhoused who leave go along the links to
+  nations with free slots and housing, in proportion to the room, at
+  most `migPerCap × capacity` a day per edge. Whoever finds no room
+  stays.
+- **The variant** rides the links in phase 3, on the flows this phase
+  creates.
+- **Capacity.** The links' capacities had been tuned for the old
+  model's tourist flows: the world's edges carried 4,300 units a day
+  against a need near 13,000, India's 127 against several hundred,
+  Singapore's 8 against 9. The three capacity levers were raised
+  fourfold (land 2, sea 1, air 0.2 per their units) so goods can reach
+  where they are asked for; with that, a world price can mean
+  something, since a single price over local markets only clears when
+  the goods can move.
+- **Found on the way.** Exporting never starves the exporter: capture
+  for export is limited by the energy left in store after the day's
+  upkeep, and no food leaves a nation in famine. A nation that went
+  short keeps a month of its import bill before building. A nation
+  that is unpaid and cannot pay that bill is broke and sells its
+  stores of whatever it is not short of down to three days, half the
+  excess a day, to pay for what it lacks. The economy works to the
+  share of its upkeep it can pay in both energy and materials, and
+  pays only for that share. A nation short of its upkeep builds no
+  units it cannot power; only exploration goes on. And because the
+  market is local, a nation captures for export only the resources a
+  linked neighbour asked for and did not get the day before: the world
+  price says what it pays, the neighbours say whether anyone is buying.
+**Census with trade** (six seeds, three years, 6 October 2026): people
+8,345 to 8,357 M (from 8,013); nations in famine 8 to 9 and short 12
+to 13, all of them nations with no reserves and no income (Singapore,
+Qatar, the Maldives, Malta, Kuwait, Djibouti, the Bahamas, Brunei,
+Bahrain, the Emirates, Andorra, Western Sahara, Jordan); the idle
+share of the world 9% (from 20% without trade); world income 59,000 to
+64,000 a day (from 56,000 to 58,000); prices 0.8 to 0.9 for food,
+0.6 to 0.7 for energy and materials, falling as supply finds demand;
+1,370 to 1,540 units traded a day; 124 to 192 deals in force. India and
+Bangladesh, short in year one, are paid up by year three on imports
+of 9% and 14% of their use; Japan lives on imports and exports its
+economy's surplus; Russia and Pakistan are the big exporters.
+
+- **Still open after the first census.** Nations whose only links to a
+  resource's exporters are air links of a few units a day (India for
+  materials) stay short with money in hand, since sea links run only to
+  the eight nearest coasts. How far sea links should reach is a question
+  for the next round; debt, for the nations with no income at all, waits
+  for relations.
 
 ### 5.2 Health and the outbreak (phase 3)
 

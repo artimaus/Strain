@@ -173,7 +173,11 @@ exploration raised.
    technology unpowered for 30 days loses 0.2% a day.
 7. *Money.* `moneyPerWorker × economy workers × paid share × (1 +
    tech/100)`, all of it income.
-8. *Budget.* Spend = min(treasury, `budgetCapPerUnit × econ`). Shares:
+8. *Budget.* A nation that went short today (famine, or upkeep under
+   98% paid) first keeps a month of what its shortfall would cost at
+   the world price, and builds nothing it cannot power: only
+   exploration goes on. Otherwise spend = min(treasury,
+   `budgetCapPerUnit × econ`). Shares:
    infrastructure at 35,000 money and 350 materials a unit; economy at
    26,000 a unit; research up to 20 money per million researchers a
    day; exploration spent only when a resource is past its ceiling,
@@ -279,7 +283,133 @@ starting shares and their floors.
 
 ## 2. Trade
 
-Not built. Phase 2; its questions are `design.md` §5.1.
+Owner: `js/trade.js`. Design: `design.md` §5.1 as decided. Built in
+phase 2, October 2026.
+
+### What it does
+
+Runs once over the whole world each day, after every nation's economy
+(`dailyWorld`). Its state: on each nation `deals` (the deals it buys
+under: seller, resource, amount a day, price, end day, days short) and
+`buying` (its running spot purchases per seller and resource: days in
+a row, units); on the world `prices[3]`.
+
+1. **Export capture.** The resource that pays best per unit of effort
+   is `price / (1 + strain)` less the energy it costs at the energy
+   price, when that beats `exportMargin`, among the resources a linked
+   nation asked for and did not get yesterday: the market is local, so
+   a nation exports to the asks it can reach. Two kinds of worker capture
+   it: the idle, in whatever infrastructure slots the economy's
+   needs-first labour left spare; and the economy workers the nation
+   has moved to export (`exportWorkers`, which the economy reserves
+   before filling its own slots). Each day, while a unit of effort at
+   the world price earns more than 1.1 times what a worker makes in the
+   economy, up to `exportShift` of the economy's workers move to
+   export; below 0.9 times, they move back. The capture uses the
+   economy's curve against the ceiling (strain rises), spends energy
+   from the store (less capture if the store cannot pay), and goes into
+   the store. A nation in famine exports nothing and moves its
+   exporters back; an unpaid economy is not a bar, since export is
+   then the way to earn, and the energy left in store is the limit.
+   A nation that is unpaid and holds less than its month's bill is
+   *broke*: it sells its stores of whatever it is not short of down to
+   three days of use, half the excess a day, to pay for what it lacks.
+2. **Asks and offers.** The ask per resource is today's shortfall from
+   the economy's ledger (the famine share of the food need; the unpaid
+   part of the energy and materials upkeep) plus a gentle restock: the
+   gap between the store and its comfort, over `restockDays`. The
+   comfort is `comfortDays / price` days of the nation's own use, so a
+   dear resource is sold from deeper in the store. The offer is
+   `storeSellShare` (10%) of whatever the store holds above its
+   comfort. A nation with no reserve of a resource at all keeps a small
+   standing ask for it.
+3. **Deals first.** Each deal delivers its amount from the seller's
+   offer to the buyer at the deal's price, within the edge's remaining
+   capacity, both nations' trade capacity (`tradePerUnit` × economy
+   units a day, bought and sold together) and the buyer's treasury. A
+   delivery under 90% counts a short day; `dealLapseDays` short days in
+   a row end the deal; so does its term.
+4. **The spot market.** Resource by resource, seller by seller: the
+   seller's offer is split among the linked nations that still ask, in
+   proportion to their asks, each transfer bounded as above, at the
+   world price, money from the buyer's treasury to the seller's.
+5. **Deals form.** A nation that bought from the same seller
+   `dealAfterDays` days in a row, averaging at least `dealMinUnits` a
+   day, signs for that average at today's price for `dealTerm` days.
+   One deal per pair and resource.
+6. **The price.** `price ×= 1 + priceElasticity × (asks − offers) /
+   (asks + offers)` over the world's totals before trading, bounded by
+   the floor and the ceiling. A price that doubles within 30 days is a
+   world headline.
+7. **People.** Each nation's leavers for the day (from the economy's
+   ledger) go along its edges to nations with room, in proportion to
+   the room (free slots or housing, whichever is less), at most
+   `migPerCap × capacity` per edge; whoever finds no room stays.
+
+**The card** (`rows`): the three world prices; per resource bought,
+sold, captured for export, and what was asked and not found; money
+paid and earned; the import share of what the nation uses and the
+exporters at work; each deal with its partner, amount, price and days
+left; people arrived, left, or kept. **Layer** Trade: importers warm,
+exporters cool, self-sufficient between. **Wire**: deals signed, run
+out and lapsed; a nation that comes to live on imports (half of its
+use); a price that doubles in a month. **Census**: per nation the
+import share, exports a day, deals held and the flag `importsHalf`;
+per world the three prices, units traded, deals in force and people
+who moved.
+
+### What it touches
+
+Reads the economy's ledger lines for the day (`economy.workInfra`,
+`idle`, `famine`, `upkeep.*`, `captureEnergy`, `housing`, `left`,
+`workEcon`, `workAcad`) and its helpers (`ECONOMY.needs`, `slotsOf`,
+`cpw`, `captureEnergyPer`, `capture`); `LINKS.edges`, `byIso`,
+`partners`, `edgesOf`; `WORLD.history` for the price spike. Writes
+stores, treasuries, population and the strain readout on nation
+states, `prices` on the world, and its own lines. The economy reads
+`_exportWorkers` back the next day so exporters do not count as idle
+hands, and holds its budget on a day it went short so the money is
+there for the market.
+
+### Defaults and levers
+
+Config rows, group "Trade":
+
+| Lever | Default | Meaning |
+|---|---|---|
+| `priceElasticity` | 0.05 | the price's daily move per unit of imbalance |
+| `priceFloor` | 0.1 | lowest price |
+| `priceCeiling` | 10 | highest price |
+| `tradePerUnit` | 2 | units a day a unit of economy can trade, bought and sold together |
+| `comfortDays` | 15 | days of use kept in store at price 1 |
+| `restockDays` | 30 | a store below its comfort is rebuilt over this many days |
+| `exportMargin` | 0.2 | least price per unit of effort worth capturing for export |
+| `dealAfterDays` | 30 | days of buying from one seller before a deal |
+| `dealMinUnits` | 0.5 | least average a day for a deal |
+| `dealTerm` | 365 | a deal's term |
+| `dealLapseDays` | 30 | undelivered days before a deal lapses |
+| `migPerCap` | 0.0005 | M people a day an edge carries per unit of capacity |
+
+Fixed in `K`: the starting price (1), the comfort's price exponent
+(1), the share of the excess store offered a day (10%; 50% when
+broke, down to 3 days), the spike test (a doubling within 30 days),
+the import share that counts as living on imports (50%), the least
+deal as a share of use (2%).
+
+### Assumptions built in
+
+- One world price per resource; distance costs nothing beyond what the
+  links' capacities allow.
+- Goods bought today are in the store tomorrow; a day's famine is
+  never cured the same day.
+- Nothing is lent: a nation without money does not buy, whatever it
+  needs.
+- A seller never refuses a buyer; relations (phase 5) will give it
+  reasons to.
+- Capacity is shared between goods and people only in that people use
+  their own small multiple of it.
+- Deals are never renegotiated; a deal's price can be far from the
+  world's by its end.
 
 ## 3. Health and the outbreak
 

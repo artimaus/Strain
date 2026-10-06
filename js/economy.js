@@ -49,6 +49,7 @@ const K = {
   unpaidGrace: 30, unpaidDecay: 0.002,                              // days unpaid before decay; share lost a day after that
   rainWidth: 0.5, subsistence: 0.6,                                 // the hump's width; food per M idle people a day
   leaveRate: 0.00005, exploreYield: 0.0001,                         // share of the idle and unhoused who leave a day; ceiling per money explored
+  holdDays: 30,                                                     // days of its import bill a nation short at home keeps before building
   worldSlack: 1.5, areaExp: 0.25,                                   // the world's ceilings over its starting need; how reserves scale with area
   startTreasuryDays: 30, startStoreDays: 15, seedNoise: 0.05,
   seedInfra: [0.4, 0.6, 0.2], seedEcon: [0.2, 0.8, 0.7], seedAcad: [0.1, 0.9, 0.25],   // (floor, slope, units per M at level 100)
@@ -137,7 +138,7 @@ function daily(iso, rng, L) {
   const buildM = s.shares.infra * Math.min(cap, Math.max(s.treasury, 0)) / K.infraCostMoney * K.infraCostMaterials;
   const slots = { I: c.infraSlots * s.infra, E: c.econSlots * s.econ, A: c.acadSlots * s.acad };
   // 3. labour, needs first: the base food need, energy, materials, then the food margin; the idle feed themselves a little
-  let idle = Math.max(0, s.pop - slots.I - slots.E - slots.A), w = null, wI = 0, wE = 0, wA = 0;
+  let idle = Math.max(0, s.pop - slots.I - slots.E - slots.A), w = null, wI = 0, wE = 0, wA = 0, wX = 0;
   for (let pass = 0; pass < 3; pass++) {
     const foodT = Math.max(0, N.food - K.subsistence * idle), foodAll = Math.max(0, N.food * (1 + K.foodMargin) - K.subsistence * idle);
     const mT = N.upkM + buildM;
@@ -146,11 +147,12 @@ function daily(iso, rng, L) {
     w.margin = Math.max(0, effortFor(foodAll / Math.max(wr, 1e-6), s.ceil[0]) / cpw - w.food);
     wI = Math.min(slots.I, w.food + w.energy + w.materials + w.margin, s.pop);
     let rest = s.pop - wI;
+    wX = Math.min(s.exportWorkers || 0, Math.max(0, slots.I - wI), rest); rest -= wX;   // the workers trade moved to export keep their slots
     wE = Math.min(slots.E, rest); rest -= wE;
     wA = Math.min(slots.A, rest); rest -= wA;
     idle = rest;
   }
-  add("workInfra", "in infrastructure", wI, "M"); add("workEcon", "in the economy", wE, "M"); add("workAcad", "in academia", wA, "M"); add("idle", "idle", idle, "M");
+  add("workInfra", "in infrastructure", wI, "M"); add("workExport", "capturing for export", wX, "M"); add("workEcon", "in the economy", wE, "M"); add("workAcad", "in academia", wA, "M"); add("idle", "idle", idle, "M");
   // 4. capture: the workers go to the base food need, then energy, then materials, then the margin
   let avail = wI; const take = {};
   for (const key of ["food", "energy", "materials", "margin"]) { take[key] = Math.min(w[key], avail); avail -= take[key]; }
@@ -169,11 +171,12 @@ function daily(iso, rng, L) {
   // 6. upkeep: the capture's own energy, then technology's, then the economy's; a unit unpaid does not work
   let eAvail = got[1] + s.stores[1] - capE;
   const techPaid = Math.min(N.techE, Math.max(eAvail, 0)); eAvail -= techPaid;
-  const econE = Math.min(N.upkE, Math.max(eAvail, 0)); eAvail -= econE;
-  s.stores[1] = Math.max(eAvail, 0);
   let mAvail = got[2] + s.stores[2];
-  const econM = Math.min(N.upkM, mAvail); mAvail -= econM;
-  const paid = Math.min(N.upkE > 0 ? econE / N.upkE : 1, N.upkM > 0 ? econM / N.upkM : 1);
+  // the economy works to the share of its upkeep it can pay in BOTH energy and materials, and pays only for that share
+  const paid = Math.min(1, N.upkE > 0 ? Math.max(eAvail, 0) / N.upkE : 1, N.upkM > 0 ? mAvail / N.upkM : 1);
+  const econE = paid * N.upkE, econM = paid * N.upkM;
+  eAvail -= econE; mAvail -= econM;
+  s.stores[1] = Math.max(eAvail, 0);
   const techOk = N.techE <= 0 || techPaid >= N.techE - 1e-9;
   add("upkeep.energy", "upkeep paid in energy", techPaid + econE, "units"); add("upkeep.materials", "upkeep paid in materials", econM, "units");
   add("econPaid", "economy paid", paid, "share"); add("techPaid", "technology paid", techOk ? 1 : 0, "");
@@ -188,12 +191,19 @@ function daily(iso, rng, L) {
   const income = c.moneyPerWorker * wE * paid * tmul(s, "techMoney");
   s.treasury += income;
   add("income", "income", income, "money");
-  // 8. the budget: at most the cap today, split by the shares
-  const spend = Math.min(s.treasury, cap), sh = s.shares;
-  let unitsI = spend * sh.infra / K.infraCostMoney;
+  // 8. the budget: at most the cap today, split by the shares; a nation that went short today first keeps what its
+  //    shortfall would cost at the world price, so the money is there for the market, and builds with the rest
+  const prices = W.WORLD_STATE.prices || [1, 1, 1];
+  const bill = famine * N.food * prices[0] + Math.max(0, N.upkE + N.techE - techPaid - econE) * prices[1] + Math.max(0, N.upkM - econM) * prices[2];
+  const held = Math.min(s.treasury, bill * K.holdDays), wentShort = famine > 0.02 || paid < 0.98;
+  const spend = Math.max(0, Math.min(s.treasury - held, cap)), sh = s.shares;
+  if (held > 0) add("held", "kept for the market", held, "money", (famine > 0.02 ? "famine" : "upkeep unpaid") + ": a month of the bill");
+  // a nation short of its upkeep builds no units it cannot power: only exploration goes on
+  const build = wentShort ? 0 : spend;
+  let unitsI = build * sh.infra / K.infraCostMoney;
   const mForI = Math.min(mAvail, unitsI * K.infraCostMaterials); unitsI = mForI / K.infraCostMaterials; mAvail -= mForI;
-  const unitsE = spend * sh.econ / K.econCostMoney;
-  const research = Math.min(spend * sh.research, wA * K.researchCost);
+  const unitsE = build * sh.econ / K.econCostMoney;
+  const research = Math.min(build * sh.research, wA * K.researchCost);
   const funded = wA > 0 ? research / (wA * K.researchCost) : 0;
   const dT = c.researchRate * (wA / Math.max(s.pop, 1e-6)) * funded / (1 + s.tech / c.techSlow);
   let worst = 0; for (let k = 1; k < 3; k++) if (strain[k] > strain[worst]) worst = k;
@@ -216,7 +226,8 @@ function daily(iso, rng, L) {
   const surplus = N.food > 0 ? Math.max(0, (foodAvail - N.food) / N.food) : 0;
   const births = s.pop < housing ? K.birthRate * Math.min(1, surplus / K.foodMargin) * s.pop : 0;
   const deaths = K.famineDeath * famine * s.pop;
-  const leave = K.leaveRate * (idle + Math.max(0, s.pop - housing));      // counted; phase 2 moves them along the links
+  const idleEff = Math.max(0, idle - (s._exportWorkers || 0));             // yesterday's exporters are not idle hands
+  const leave = K.leaveRate * (idleEff + Math.max(0, s.pop - housing));    // the trade pillar moves them along the links, or keeps them
   s.pop = Math.max(0.001, s.pop + births - deaths - leave);
   add("births", "born", births, "M"); add("deaths", "died", deaths, "M"); add("left", "left", leave, "M"); add("housing", "housed", housing, "M");
   // the budget rule: one step a day from the largest other share to the one the first firing rule names
@@ -227,7 +238,7 @@ function daily(iso, rng, L) {
     if (strain[what] > 1.5) { rule = "explore"; reason = RES[what] + " past its ceiling"; }
     else { rule = "infra"; reason = "short of " + RES[what]; }
   } else if (s.pop > housing) { rule = "infra"; reason = "no room"; }
-  else if (idle > 0.1 * s.pop) { rule = "econ"; reason = "idle hands"; }
+  else if (idleEff > 0.1 * s.pop) { rule = "econ"; reason = "idle hands"; }
   else if (s.treasury < 30 * cap) { rule = "keep"; reason = "thin reserve"; }
   else { rule = sh.infra <= sh.econ ? "infra" : "econ"; reason = "nothing pressing: build"; }
   const donors = SHARES.filter(k => k !== rule && sh[k] > K.shareFloor[k] + 1e-9).sort((a, b) => sh[b] - sh[a]);
@@ -263,7 +274,7 @@ function rows(iso, L) {
   const out = [
     ["people", f(s.pop) + " M · " + f(s._housing != null ? s._housing : cfg().housingPerUnit * s.infra) + " M housed" + (ran ? " · " + f(s._idle) + " M idle" : ""),
       ran ? "+" + f(g("births"), 3) + " born · " + f(g("deaths"), 3) + " died · " + f(g("left"), 3) + " left" : ""],
-    ["labour", ran ? f(g("workInfra")) + " infrastructure · " + f(g("workEcon")) + " economy · " + f(g("workAcad"), 2) + " academia" : "—"],
+    ["labour", ran ? f(g("workInfra")) + " infrastructure · " + f(g("workEcon")) + " economy · " + f(g("workAcad"), 2) + " academia" + (g("workExport") ? " · " + f(g("workExport")) + " export" : "") : "—"],
     ["units", f(s.infra) + " infrastructure · " + f(s.econ) + " economy · " + f(s.acad) + " academia", ran ? "+" + f(g("built.infra"), 3) + " / +" + f(g("built.econ"), 3) + " today" : ""],
   ];
   RES.forEach((r, k) => out.push([r, "ceiling " + f(s.ceil[k], 0) + " · " + (ran ? f(g("captured." + r)) + " captured · " : "") + f(s.stores[k], 0) + " stored",
@@ -309,9 +320,15 @@ function censusWorld() {
   return { people: Math.round(pop), famineNations: fam, shortNations: short, idleShare: Math.round(100 * idle / Math.max(pop, 1e-6)), income: Math.round(income), techMean: Math.round(10 * techPop / Math.max(pop, 1e-6)) / 10 };
 }
 
+/* helpers for the pillars after this one (trade captures for export with the same curve) */
+const slotsOf = s => { const c = cfg(); return { I: c.infraSlots * s.infra, E: c.econSlots * s.econ, A: c.acadSlots * s.acad }; };
+const cpwOf = s => cfg().capturePerWorker * tmul(s, "techCapture");
+const captureEnergyPer = s => cfg().captureEnergy * tdown(s, "techEnergy");
+const capture = (s, r, effort) => captured(effort, s.ceil[r]);
+
 window.ECONOMY = W.registerPillar({
   name: "economy", label: "Economy", fields: FIELDS, seed, daily, rows, census, censusWorld, layers,
   config: { group: "Economy", defaults: LEVERS, rows: ROWS },
-  K, LEVERS, calibrate, needs,
+  K, LEVERS, calibrate, needs, slotsOf, cpw: cpwOf, captureEnergyPer, capture,
 });
 })();

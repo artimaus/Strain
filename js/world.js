@@ -58,6 +58,7 @@ function newWorld(seed) {
   WORLD_STATE.seed = (seed == null ? (Math.random() * 4294967296) : seed) >>> 0;
   WORLD_STATE.day = 0;
   WORLD_STATE.log = [];
+  for (const [k, , d] of WORLD_FIELDS) if (k !== "day" && k !== "log") WORLD_STATE[k] = clone(d);   // the pillars' world fields
   for (const iso in COUNTRY_STATE) delete COUNTRY_STATE[iso];
   for (const iso in LEDGER) delete LEDGER[iso];
   for (const iso in HIST) delete HIST[iso];
@@ -135,6 +136,7 @@ function registerPillar(p) {
   if (!p || !ORDER.includes(p.name)) throw new Error("a pillar's name must be one of " + ORDER.join(", "));
   pillars[p.name] = p;
   for (const row of (p.fields || [])) addCountryField(row);
+  for (const row of (p.worldFields || [])) addWorldField(row);
   for (const iso in COUNTRY_STATE) seedPillar(p, iso, COUNTRY_STATE[iso]);   // states made before it arrived
   return p;
 }
@@ -346,6 +348,13 @@ function unpackAll(obj) {
    beside the fields because newWorld needs it before anything is
    unpacked.  A saved value of the wrong shape falls back to the default. */
 const WORLD_FIELDS = [["day", "day", 0], ["log", "log", []]];
+function addWorldField(row) {
+  const [key, sh] = row;
+  if (WORLD_FIELDS.some(f => f[0] === key || f[1] === sh)) return;
+  const d = row[2] === undefined ? null : row[2];
+  WORLD_FIELDS.push([key, sh, d]);
+  if (WORLD_STATE[key] === undefined) WORLD_STATE[key] = clone(d);
+}
 function packWorld() {
   const o = { seed: WORLD_STATE.seed };
   for (const [k, sh] of WORLD_FIELDS) o[sh] = WORLD_STATE[k];
@@ -367,7 +376,7 @@ function unpackWorld(o) {
 window.WORLD = {
   COUNTRY_STATE, WORLD_STATE, COUNTRY_FIELDS, WORLD_FIELDS, isAgent, nameOf, log,
   blankState, ensureCountry, newWorld, resetCountries, anyCovered,
-  ORDER, registerPillar, unregisterPillar, pillarList, addCountryField,
+  ORDER, registerPillar, unregisterPillar, pillarList, addCountryField, addWorldField,
   ledgerOf, worldLedger, history, HISTORY_DAYS, dayRng, seedRng,
   censusOf, censusWorld,
   regionMembers, regionAgg,

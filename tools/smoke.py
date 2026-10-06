@@ -358,30 +358,30 @@ POST = """<script>
     at("foundations");
     try {
       var W = window.WORLD, ran = [], draws = [];
-      // the test pillars take the empty trade and relations slots; the real economy keeps its own
-      var trade = { name: "trade", label: "Test trade", fields: [["tz", "tz", 0]],
-        daily: function (iso, rng, L) { if (iso === "FR") { ran.push("trade"); draws.push(rng()); L.add("trade", "trade.x", "x", W.day, "u"); } },
-        rows: function (iso, L) { return [["x", L.get("trade.x")]]; } };
+      // the test pillars take the empty health and relations slots; the real economy and trade keep theirs
+      var health = { name: "health", label: "Test health", fields: [["tz", "tz", 0]],
+        daily: function (iso, rng, L) { if (iso === "FR") { ran.push("health"); draws.push(rng()); L.add("health", "health.x", "x", W.day, "u"); } },
+        rows: function (iso, L) { return [["x", L.get("health.x")]]; } };
       var rel = { name: "relations", label: "Test relations",
         daily: function (iso, rng, L) { if (iso === "FR") ran.push("relations"); } };
-      W.registerPillar(rel); W.registerPillar(trade);
+      W.registerPillar(rel); W.registerPillar(health);
       var fr = W.ensureCountry("FR");
       r.modals.pillarFields = fr.tz === 0 && W.COUNTRY_FIELDS.some(function (f) { return f[0] === "tz"; });
       W.newWorld(4242); W.advanceDays(3);
-      r.modals.pillarOrder = ran.join(",") === "trade,relations,trade,relations,trade,relations";
+      r.modals.pillarOrder = ran.join(",") === "health,relations,health,relations,health,relations";
       var L = W.ledgerOf("FR");
-      r.modals.ledgerToday = L.day === W.day && L.get("trade.x") === W.day && L.of("trade").length === 1 && W.ledgerOf("DE").get("trade.x") === 0;
+      r.modals.ledgerToday = L.day === W.day && L.get("health.x") === W.day && L.of("health").length === 1 && W.ledgerOf("DE").get("health.x") === 0;
       var d1 = draws.slice(); ran = []; draws = [];
       W.newWorld(4242); W.advanceDays(3);
       r.modals.rngRepeatable = d1.length === 3 && d1.every(function (v, i) { return v === draws[i] && v >= 0 && v < 1; });
       W.newWorld(4343); W.advanceDays(3);
       r.modals.rngSeeded = !d1.every(function (v, i) { return v === draws[3 + i]; });
       W.advanceDays(100);
-      var h = W.history("FR", "trade.x");
+      var h = W.history("FR", "health.x");
       r.modals.historyRing = h.length === W.HISTORY_DAYS && h[h.length - 1] === W.day && h[0] === W.day - W.HISTORY_DAYS + 1;
       // the card: a section per pillar that offers rows, its open state remembered
       window.ENTITY.openCountryModal("FR");
-      var det = $("cmBody").querySelector('details.pillar[data-pillar="trade"]');
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="health"]');
       r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="relations"]');
       esc();
       // the save: a pillar field rides in the pack table, version 9
@@ -397,12 +397,45 @@ POST = """<script>
         setTimeout(function () {
           r.modals.pillarFieldLoads = fr0 === 0 && W.ensureCountry("FR").tz === 5;
           localStorage.removeItem("entity_save_v3");
-          W.unregisterPillar("trade"); W.unregisterPillar("relations");
+          W.unregisterPillar("health"); W.unregisterPillar("relations");
           W.newWorld();
           done();
         }, 150);
       }, 50);
     } catch (e) { r.modals.pillarOrder = false; r.modals.foundationsError = String(e); done(); }
+  }
+  // Phase 2: the trade pillar (docs/nations.md §2): goods move along the
+  // links at a world price, deals form, people move, and it all shows.
+  function trade(done) {
+    at("trade");
+    try {
+      var W = window.WORLD;
+      r.modals.tradeRegistered = !!window.TRADE && W.pillarList().some(function (p) { return p.name === "trade"; }) && Array.isArray(W.WORLD_STATE.prices);
+      W.newWorld(9001); W.advanceDays(75);
+      var sg = W.ledgerOf("SG"), LW = W.worldLedger();
+      r.modals.tradeFeeds = sg.get("trade.bought.food") > 0 && W.COUNTRY_STATE.SG._importShare > 0;
+      r.modals.tradeMoves = LW.get("trade.traded") > 0 && Object.keys(W.COUNTRY_STATE).some(function (iso) { return W.ledgerOf(iso).get("trade.export.food") > 0 || W.ledgerOf(iso).get("trade.export.energy") > 0 || W.ledgerOf(iso).get("trade.export.materials") > 0; });
+      r.modals.tradeDeals = LW.get("trade.deals") > 0 && Object.keys(W.COUNTRY_STATE).some(function (iso) { return W.COUNTRY_STATE[iso].deals.length > 0; });
+      r.modals.tradePrices = W.WORLD_STATE.prices.every(function (p) { return p > 0 && isFinite(p); }) && W.history("", "trade.price.food").length > 60;
+      r.modals.tradePeople = LW.get("trade.migrants") > 0;
+      r.modals.tradeCensus = typeof W.censusOf("SG").imports === "number" && typeof W.censusWorld().priceFood === "number";
+      var p1 = W.WORLD_STATE.prices.slice(); W.newWorld(9001); W.advanceDays(75);
+      r.modals.tradeRepeats = W.WORLD_STATE.prices.every(function (p, i) { return p === p1[i]; });
+      var tb = document.querySelector('#mapLegend .layers button[data-layer="trade"]');
+      r.modals.tradeLayer = !!tb;
+      window.ENTITY.openCountryModal("SG");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="trade"]');
+      r.modals.tradeCard = !!det && det.querySelectorAll(".row").length >= 2;
+      esc();
+      r.modals.tradeWire = W.WORLD_STATE.log.some(function (e) { return e.kind === "trade"; });
+      // a deal rides in the save
+      $("saveBtn").click();
+      var saved = JSON.parse(localStorage.getItem("entity_save_v3") || "null");
+      r.modals.tradeSaves = !!saved && Array.isArray(saved.world.pri) && Object.keys(saved.countries).some(function (iso) { return saved.countries[iso].dl && saved.countries[iso].dl.length; });
+      localStorage.removeItem("entity_save_v3");
+      W.newWorld();
+      done();
+    } catch (e) { r.modals.tradeFeeds = false; r.modals.tradeError = String(e); done(); }
   }
   // Phase 1: the economy pillar (docs/nations.md §1) runs, feeds, repeats
   // on a seed, shows on the card, the map and the wire, and reaches the
@@ -462,7 +495,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { saveLoad(finish); }); }); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { saveLoad(finish); }); }); }); }); }); });
   });
 })();
 </script>

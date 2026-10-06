@@ -261,9 +261,9 @@ All `ENTITY_CONFIG` keys and config-panel rows (group "Links").
 
 | Lever | Default | Meaning |
 |---|---|---|
-| `landCap` | 0.5 | land capacity per √km of border |
-| `seaCap` | 0.2 | sea capacity per √km of the shorter coastline |
-| `airCap` | 0.05 | air capacity per unit of hub product |
+| `landCap` | 2 | land capacity per √km of border, in units of goods a day |
+| `seaCap` | 1 | sea capacity per √km of the shorter coastline |
+| `airCap` | 0.2 | air capacity per unit of hub product |
 | `seaRange` | 4000 km | sea capacity falls off by e per this distance |
 | `airRange` | 8000 km | air partner choice and capacity fall off by e per this |
 | `seaK` | 8 | sea partners per coastal country |
@@ -276,8 +276,8 @@ graph; only a new world does. Capacities refresh at once.
 
 - The graph is static: the same world map and the same rows give the
   same graph every time. Nothing on it is ever added, cut or closed.
-- Capacity is a number with no unit yet. What it is a capacity *of* is
-  for the redesign to say.
+- Capacity is units of goods a day an edge can carry (the trade pillar,
+  `nations.md` §2); people use a small multiple of it.
 - Sea partners are the nearest by centroid distance, not by port or
   shipping lane; Spain and Morocco are neighbours, Spain and Argentina
   are not.
