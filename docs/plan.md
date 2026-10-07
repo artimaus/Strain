@@ -98,38 +98,37 @@ trading on their own; a nation with no reserves of a resource lives on
 imports; people move from a crowded nation to an empty one; the world's
 resource balance is a census line.
 
-## Phase 3: health and the outbreak
+## Phase 3: end products
 
-**Goal.** A deployed variant spreads within and between countries and
-is noticed and answered by nations in proportion to what they have.
+**Goal.** `design.md` §5.7: military and health as levels built by the
+budget, with embodied technology and population, upkeep per resource
+and named decay; technology's upkeep and flat decay reworked.
 
-**Scope.** `health.js` (the health system's capacity, awareness,
-response); the outbreak's spread within a country and across the links
-with the goods and people they carry; the variant's derived parameters
-and mutation on the map; what a response does to the variant, the
-nation and the links; coverage's meaning; the coverage layer's new
-semantics; card rows; wire headlines for first cases, awareness,
-responses, clearances; the health levers.
+**Scope.** `products.js` (a new slot after the economy in the daily
+order): the two levels, their running averages, their cost per point,
+their upkeep and decay lines; the budget shares and their stand-in
+pressures; health's effect on births and deaths in the economy's
+people step; technology's energy upkeep scaled by population, economy
+and infrastructure, and its flat decay; card rows; layers for military
+and health; wire headlines (a level built or decaying, a health
+system behind its people); census lines; levers.
 
-**Q&A at the start.** `design.md` §5.2.
+**Q&A at the start.** The default numbers for the costs, upkeeps and
+decay rates, on a worked example as in phase 1.
 
-**Done when.** A deployment reaches a neighbour in weeks and a region
-in months; a rich nation clears it and a poor one does not; a cloaked
-variant is noticed later than a loud one; every step shows on the card
-and the wire.
+**Done when.** On six seeds over three years levels rise where the
+budget feeds them and fall where it does not; a fast-growing nation's
+levels dilute visibly; a nation that stops building falls behind its
+own technology; every decay has its line.
 
-## Phase 4: pressure on the player
+## Phase 4: the outbreak pass (several phases)
 
-**Goal.** The map can end the game.
-
-**Scope.** Tracing an outbreak to a deployment; scrutiny from the map;
-the response bar's return with a stated meaning; what the player can
-do on the map besides deploy; game over from the map.
-
-**Q&A at the start.** `design.md` §5.3.
-
-**Done when.** A careless deployment ends a game within an evening; a
-careful one survives; the player can see the heat coming.
+Deferred as a pass of its own, with its design rounds (`design.md`
+§5.2 and §5.3) held when it starts. Expected to split into: the
+variant's spread within and between countries on the trade pillar's
+flows; health's detection and response using the level of phase 3;
+pressure on the player and game over from the map. The coverage layer
+keeps its present meaning until then.
 
 ## Phase 5: relations and alliances
 
@@ -153,7 +152,29 @@ conflict layer; wire headlines.
 
 **Q&A at the start.** `design.md` §5.5.
 
-## Phase 7: balance
+## Phase 7: regimes and their goals
+
+**Goal.** `design.md` §5.8: regimes with genomes of preferences and
+thresholds, stability as grievance, regime change by type, a pool of
+genomes bred offline.
+
+**Scope.** `regimes.js` (stability, the regime record, the triggers,
+selection and mutation at a change, the card's named traits and score);
+the economy's and the products' rules reading their thresholds and
+weights from the regime; `tools/evolve.py` breeding the pool in the
+headless census and writing it to a data file; wire headlines for
+elections, successions, coups and collapses; a stability layer; census
+lines.
+
+**Q&A at the start.** The gene list and the words for each; the
+pressures and their weights in grievance; the terms and lines per
+type; the fitness the breeder scores by; how large the pool is.
+
+**Done when.** Regimes change for readable reasons; a world bred from
+the pool is better governed than one with random genomes on the census;
+a nation's card says in words what its government wants.
+
+## Phase 8: balance
 
 **Goal.** The whole plays over an evening and reads clearly throughout.
 

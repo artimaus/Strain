@@ -451,6 +451,118 @@ neighbours who sell and need an income to buy with.
   changes hands.
 - How wars and crises emerge at the global scale from local ones.
 
+### 5.7 End products: technology, military, health (phase 3): as decided, 6 October 2026
+
+A nation converts its harvested resources, through its developments,
+into *end products*: money (the economy), technology (academia), and
+now military and health. The military's effects wait for the war
+session and health's outbreak effects for the outbreak pass; this
+section is the mechanism they share.
+
+**A level, per head.** Military and health are each one level, built
+by their own budget share. A point costs money and materials times the
+population, and the price per point rises with the level, each product
+with its own cost formula (as research slows with technology). Levels
+are not staffed: nobody is assigned to them, though their effects
+touch the population.
+
+**Two running averages**, updated whenever the level rises, weighted
+by the size of the rise against the level:
+
+- *embodied technology*: the nation's technology at the times the level
+  was built;
+- *embodied population* (the talent pool): the population at those
+  times.
+
+`new embodied = (L / (L + ΔL)) × old embodied + (ΔL / (L + ΔL)) ×
+today's value`. Decay leaves the averages alone; only building moves
+them toward the present. Military 40 at embodied technology 40, rising
+by 2 at technology 45, is at 40.24.
+
+**Upkeep**, per resource, per product, each at a rate per million
+people plus a rate per unit of infrastructure, times the level, cut by
+technology: military draws materials always and energy and food only
+in wartime; health draws energy and materials. Technology draws energy
+at a rate scaled by population, economy and infrastructure, not cut by
+its own level.
+
+**Decay**, named causes added, each at its own rate: materials unpaid
+(the unpaid share), energy unpaid (the unpaid share), the population
+above the embodied pool (the gap as a share of the pool: growth outran
+training), the technology above the embodied level (the gap: the stock
+is obsolete and must be retrofitted). Technology itself has a small
+flat decay that academia must outrun, and decays when its energy goes
+unpaid. All of it is lines on the card.
+
+**When a level is used** (a war, an outbreak), its effect is the level
+times the technology multiplier at its *embodied* technology and times
+the embodied population over the current one, capped at one. An old
+army fights with old technology and green recruits until it is
+rebuilt; a health system built for fifty million strains at eighty.
+
+**Population.** Health lowers deaths (a base mortality joins the people
+step, and the famine deaths) and raises births. The military touches
+people and labour only in war.
+
+**Budget pressures until regimes decide** (§5.8): each nation's military
+share has a floor set from its data row's military column, a stand-in
+for threat until relations and war exist; the health share rises when
+deaths run above a line and falls back after; both reasons show on the
+card. *To revisit with regime decision-making.*
+
+```
+on a rise ΔL at technology T, population P:
+   embT ← (embT·L + T·ΔL) / (L + ΔL)      embP ← (embP·L + P·ΔL) / (L + ΔL)
+upkeep_r     = L · (perHead_r · P + perInfra_r · I) · (1 − techUpkeep · T/100)
+decay / day  = Σ_r kUnpaid_r · (1 − paid_r) + kDilute · max(0, P − embP)/embP
+             + kObsolete · max(0, T − embT)/100
+effect       = L · techMultiplier(embT) · min(1, embP / P)
+cost / point = (baseMoney, baseMaterials) · P · (1 + L / slow)
+```
+
+### 5.8 Regimes and their goals: as decided, 6 October 2026
+
+Regimes decide their preferences and goals by a genetic algorithm,
+replacing the fixed pressures of §4.4 and §5.7.
+
+- **The genome** encodes the preferences and thresholds of the existing
+  rules: the weights of the budget shares (infrastructure, economy,
+  research, military, health, exploration, keep), the thresholds the
+  rules fire at (idle tolerance, reserve days, the deaths line), export
+  appetite, how fast shares move. Every gene is a named preference the
+  card shows in a word or two (thrifty, builds roads, hawkish, open to
+  trade), with the regime's score and age; the numbers sit behind a
+  fold.
+- **Regime change** is the moment of selection. Its triggers differ by
+  regime type and in general revolve around stability falling too low;
+  some types change after a term (democracies). Later, regime change
+  can be a war goal or an espionage action.
+- **The new genome** is picked from a baseline pool of workable genomes
+  and mutated, or crossed with a successful regime the nation can see.
+  The pool is trained up beforehand (an offline evolution over many
+  seeds in the headless census) so that no nation is governed by a
+  random genome.
+- **Stability** is 100 minus a *grievance* that accumulates from each
+  day's pressures (the famine share, unpaid upkeep, the idle share,
+  deaths, and later a lost war) and fades by a fixed share a day. A bad
+  month is remembered for a season; the card shows what each pressure
+  added and what faded.
+- **Four regime types**, from the data rows' government column, each
+  with its trigger. *Elected*: a change at the end of each term, early
+  if stability falls below its line. *Hereditary*: a change at a
+  succession, which comes at random on a long cycle, or on collapse.
+  *Military*: a change when stability has been below its line for long
+  enough (a coup). *Party*: a change on a long cycle (a congress) or on
+  collapse. The type itself can change at a regime change.
+- **The pool** is bred offline: a tool runs the world over many seeds
+  with random genomes in the headless census, scores regimes by their
+  outcomes, breeds the best, and writes a pool of a few dozen genomes to
+  a data file the game loads. It is rerun when the rules change; a
+  player never waits for it.
+- **Place in the plan**: after relations and war, before balance, so
+  the pool is trained on the world as it will be. The stand-in
+  pressures of §4.4 and §5.7 hold until then.
+
 ### 5.6 Presentation (with every phase)
 
 - Map layers for each new state; wire headlines for each ledger event;
