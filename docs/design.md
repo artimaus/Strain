@@ -391,11 +391,30 @@ Bangladesh, short in year one, are paid up by year three on imports
 of 9% and 14% of their use; Japan lives on imports and exports its
 economy's surplus; Russia and Pakistan are the big exporters.
 
-- **Still open after the first census.** Nations whose only links to a
-  resource's exporters are air links of a few units a day (India for
-  materials) stay short with money in hand, since sea links run only to
-  the eight nearest coasts. How far sea links should reach is a question
-  for the next round; debt, for the nations with no income at all, waits
+**Census after the sea links and the effort cap** (six seeds, three
+years, 6 October 2026): famine in 2 nations (Singapore, the
+Maldives); short 5 to 10 (Taiwan and South Korea in every seed,
+Turkey in half); idle share 10 to 14%; income 56,000 to 63,000; prices
+0.65 to 0.78 food, 0.53 to 0.60 energy, 0.39 to 0.55 materials, the
+world in surplus; 2,450 to 2,770 units traded a day; 200 to 250 deals.
+China, India and Japan, short at one year while the market caught up
+with the capture they no longer make past three times their ceilings,
+are paid up by year three on imports of 14%, 21% and 33% of their use;
+the Gulf states export energy and eat. Taiwan and South Korea are the
+dense, rich, reserve-poor cases left for the next pillars: they have
+neighbours who sell and need an income to buy with.
+
+- **After the first census.** Nations whose only links to a resource's
+  exporters were air links of a few units a day (India for materials)
+  stayed short with money in hand, since sea links ran only to the
+  eight nearest coasts. Decided: every coast is linked to every coast,
+  a shipping lane whose capacity falls e-fold per 6,000 km (`seaK` 0,
+  `seaRange` 6000); about 11,800 sea edges, the day still under a tenth
+  of a second. And the Gulf states, with energy ceilings ten times
+  their need, stayed in famine because needs-first labour sent their
+  whole workforce to farm a food ceiling of a third of a unit: a nation
+  now works a reserve only up to three times its ceiling and leaves the
+  rest to the market. Debt, for a nation with no income at all, waits
   for relations.
 
 ### 5.2 Health and the outbreak (phase 3)

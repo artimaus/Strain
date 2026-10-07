@@ -59,7 +59,9 @@ function rebuild(topo) {
   for (const k in pairKey) delete pairKey[k];
   pos = Object.create(null); coastKm = Object.create(null);
   const c = cfg() || {};
-  const seaK = c.seaK ?? 8, airK = c.airK ?? 8, airRange = c.airRange ?? 8000;
+  const seaK = c.seaK ?? 0, airK = c.airK ?? 8, airRange = c.airRange ?? 8000;
+  for (const k in partnerCache) delete partnerCache[k];
+  for (const k in pairEdges) delete pairEdges[k];
   const cs = (topo.countries || []).filter(x => D.isAgent(x.iso2) && isFinite(x.lon) && isFinite(x.lat));
   for (const x of cs) pos[x.iso2] = { lon: x.lon, lat: x.lat };
   for (const iso in (topo.coastKm || {})) if (pos[iso]) coastKm[iso] = topo.coastKm[iso];
@@ -74,12 +76,13 @@ function rebuild(topo) {
     const [a, b] = pair.split("|");
     if (pos[a] && pos[b]) addEdge(a, b, "land", 10, {});
   }
-  // sea: each coastal country to its nearest coastal partners
+  // sea: every coastal country to every other, a shipping lane whose capacity falls with distance (refreshCapacity);
+  // seaK, when set above 0, limits each to its nearest partners instead
   const coastal = cs.filter(x => coastKm[x.iso2] > 0);
   for (const a of coastal) {
     const cands = coastal.filter(b => b !== a).map(b => [haversineKm(pos[a.iso2], pos[b.iso2]), b.iso2]);
     cands.sort((x, y) => x[0] - y[0]);
-    for (const [d, iso] of cands.slice(0, seaK)) addEdge(a.iso2, iso, "sea", d, {});
+    for (const [d, iso] of (seaK > 0 ? cands.slice(0, seaK) : cands)) addEdge(a.iso2, iso, "sea", d, {});
   }
   // air: each country to the partners its hub reaches best
   for (const a of cs) {
@@ -117,10 +120,20 @@ function rangeOf(a, b) {                     // the land border's terrain factor
   for (const i of (byIso[a] || [])) { const e = edges[i]; if (e.type === "land" && (e.a === b || e.b === b)) return e.range; }
   return 1;
 }
+const partnerCache = Object.create(null);  // iso -> [partners], built once per graph (the trade pillar asks every day)
 function partners(iso) {                     // every country linked to iso, any type, once each
+  if (partnerCache[iso]) return partnerCache[iso];
   const seen = new Set();
   for (const i of (byIso[iso] || [])) { const e = edges[i]; seen.add(e.a === iso ? e.b : e.a); }
-  return [...seen];
+  return (partnerCache[iso] = [...seen]);
+}
+const pairEdges = Object.create(null);      // "A|B" -> [edge indices] of every type between the two
+function edgesBetween(a, b) {
+  const k = a < b ? a + "|" + b : b + "|" + a;
+  if (pairEdges[k]) return pairEdges[k];
+  const out = [];
+  for (const i of (byIso[a] || [])) { const e = edges[i]; if (e.a === b || e.b === b) out.push(i); }
+  return (pairEdges[k] = out);
 }
 function linked(a, b) {
   for (const i of (byIso[a] || [])) { const e = edges[i]; if (e.a === b || e.b === b) return true; }
@@ -134,7 +147,7 @@ function capacity(a, b) {                   // between two countries, summed ove
 }
 
 window.LINKS = {
-  rebuild, refreshCapacity, count, linked, linkedBy, rangeOf, partners, edgesOf, capacity,
+  rebuild, refreshCapacity, count, linked, linkedBy, rangeOf, partners, edgesOf, edgesBetween, capacity,
   edges, byIso,
   get ready() { return ready; },
   get coastKm() { return coastKm; },

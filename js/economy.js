@@ -50,6 +50,7 @@ const K = {
   rainWidth: 0.5, subsistence: 0.6,                                 // the hump's width; food per M idle people a day
   leaveRate: 0.00005, exploreYield: 0.0001,                         // share of the idle and unhoused who leave a day; ceiling per money explored
   holdDays: 30,                                                     // days of its import bill a nation short at home keeps before building
+  maxStrain: 3,                                                     // a nation works a reserve up to this many times its ceiling, then buys
   worldSlack: 1.5, areaExp: 0.25,                                   // the world's ceilings over its starting need; how reserves scale with area
   startTreasuryDays: 30, startStoreDays: 15, seedNoise: 0.05,
   seedInfra: [0.4, 0.6, 0.2], seedEcon: [0.2, 0.8, 0.7], seedAcad: [0.1, 0.9, 0.25],   // (floor, slope, units per M at level 100)
@@ -143,8 +144,10 @@ function daily(iso, rng, L) {
     const foodT = Math.max(0, N.food - K.subsistence * idle), foodAll = Math.max(0, N.food * (1 + K.foodMargin) - K.subsistence * idle);
     const mT = N.upkM + buildM;
     const eT = (N.upkE + N.techE + cE * (foodAll / Math.max(wr, 1e-6) + mT)) / Math.max(0.05, 1 - cE);
-    w = { food: effortFor(foodT / Math.max(wr, 1e-6), s.ceil[0]) / cpw, energy: effortFor(eT, s.ceil[1]) / cpw, materials: effortFor(mT, s.ceil[2]) / cpw };
-    w.margin = Math.max(0, effortFor(foodAll / Math.max(wr, 1e-6), s.ceil[0]) / cpw - w.food);
+    // a nation works a reserve up to maxStrain times its ceiling and leaves the rest of the need to the market
+    const effort = (target, R) => Math.min(effortFor(target, R), K.maxStrain * R);
+    w = { food: effort(foodT / Math.max(wr, 1e-6), s.ceil[0]) / cpw, energy: effort(eT, s.ceil[1]) / cpw, materials: effort(mT, s.ceil[2]) / cpw };
+    w.margin = Math.max(0, effort(foodAll / Math.max(wr, 1e-6), s.ceil[0]) / cpw - w.food);
     wI = Math.min(slots.I, w.food + w.energy + w.materials + w.margin, s.pop);
     let rest = s.pop - wI;
     wX = Math.min(s.exportWorkers || 0, Math.max(0, slots.I - wI), rest); rest -= wX;   // the workers trade moved to export keep their slots

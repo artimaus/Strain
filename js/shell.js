@@ -38,7 +38,7 @@ const ENTITY_CONFIG = {
   variantDecayChance: 0.006, variantDecayAmount: 0.001,
   bountyRefreshScrutiny: 1,
   // links (js/links.js): the graph's capacities, in units of goods a day (raised fourfold for the trade pillar, docs/design.md §5.1)
-  landCap: 2, seaCap: 1, airCap: 0.2, seaRange: 4000, airRange: 8000, seaK: 8, airK: 8,
+  landCap: 2, seaCap: 1, airCap: 0.2, seaRange: 6000, airRange: 8000, seaK: 0, airK: 8,   // seaK 0: every coast to every coast
   // world clock (js/world.js)
   dayMs: 10000, maxCatchup: 4, logCap: 200,     // a day is 10 s at 1x: 2.5 s at the default 4x
 };

@@ -66,8 +66,8 @@ function dailyWorld(rng, LW) {
     let idle = Le.get("economy.idle"), exporters = 0;
     const fed = Le.get("economy.famine") <= 0.02;                 // nobody exports food out of a famine; the energy left in store limits the rest
     const broke = (Le.get("economy.econPaid") < 0.98 || !fed) && s.treasury < Le.get("economy.held") + 1e-9;   // unpaid and without the month's bill in hand
-    // the resource that pays best per unit of effort, net of the energy it costs, among those a linked nation went
-    // short of yesterday: the market is local, so a nation exports to the asks it can reach, not to the world's price alone
+    // the resource that pays best per unit of effort, net of the energy it costs, among those a linked nation asked
+    // for yesterday: the market is local, so a nation exports to the asks it can reach, not to the world's price alone
     const st = s._strain || [0, 0, 0], cE = E.captureEnergyPer(s), cpw = E.cpw(s), dem = s._demand || [0, 0, 0];
     let best = -1, bestV = c.exportMargin;
     for (let r = 0; r < 3; r++) {
@@ -123,13 +123,12 @@ function dailyWorld(rng, LW) {
     ask[iso] = a; offer[iso] = o; cap[iso] = c.tradePerUnit * s.econ;
     bought[iso] = [0, 0, 0]; sold[iso] = [0, 0, 0]; paid[iso] = [0, 0, 0]; earned[iso] = [0, 0, 0];
   }
-  const totalAsk = [0, 0, 0], totalOffer = [0, 0, 0];
-  for (const iso of isos) for (let r = 0; r < 3; r++) { totalAsk[r] += ask[iso][r]; totalOffer[r] += offer[iso][r]; }
+  const totalAsk = [0, 0, 0], totalOffer = [0, 0, 0], ask0 = Object.create(null);
+  for (const iso of isos) { ask0[iso] = ask[iso].slice(); for (let r = 0; r < 3; r++) { totalAsk[r] += ask[iso][r]; totalOffer[r] += offer[iso][r]; } }
   // a transfer of goods between two linked nations, within every limit
-  function edgeBetween(a, b) {
-    const idx = L.byIso[a] || [];
+  function edgeBetween(a, b) {                                  // the edge between two nations with the most room left today
     let best = -1, room = 0;
-    for (const i of idx) { const e = L.edges[i]; if (e.a !== b && e.b !== b) continue; const left = e.cap - used[i]; if (left > room) { room = left; best = i; } }
+    for (const i of L.edgesBetween(a, b)) { const left = L.edges[i].cap - used[i]; if (left > room) { room = left; best = i; } }
     return best;
   }
   function transfer(seller, buyer, r, want, price) {
@@ -215,11 +214,11 @@ function dailyWorld(rng, LW) {
       W.WORLD_STATE[flag] = spiked;
     }
   }
-  // 6. the ledgers, the readouts and the wire for every nation; and what each nation's neighbours went without, for tomorrow's exporters
+  // 6. the ledgers, the readouts and the wire for every nation; and what each nation's neighbours asked for today, for tomorrow's exporters
   let traded = 0, deals = 0;
   for (const iso of isos) {
     const d = [0, 0, 0];
-    for (const p of L.partners(iso)) if (ask[p]) for (let r = 0; r < 3; r++) d[r] += ask[p][r];
+    for (const p of L.partners(iso)) if (ask0[p]) for (let r = 0; r < 3; r++) d[r] += ask0[p][r];
     S[iso]._demand = d;
   }
   for (const iso of isos) {

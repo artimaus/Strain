@@ -159,7 +159,10 @@ exploration raised.
    then energy (the upkeeps plus the capture's own energy), then
    materials (upkeep plus today's building), then a 10% food margin;
    then the economy's slots, then academia's; the rest are idle. The
-   workers a target needs come from inverting the capture curve.
+   workers a target needs come from inverting the capture curve, but a
+   nation works a reserve only up to three times its ceiling and leaves
+   the rest of the need to the market, so a nation with a reserve of
+   nothing does not send everyone to dig for it.
 4. *Capture.* `capturePerWorker × (1 + tech/100)` per million
    workers; against each ceiling `captured = ceil × ln(1 + effort /
    ceil)`; food × the rain factor; energy spent `captureEnergy × (1 −
