@@ -471,6 +471,35 @@ POST = """<script>
       done();
     } catch (e) { r.modals.economyRuns = false; r.modals.economyError = String(e); done(); }
   }
+  // Phase 3: the products pillar (docs/nations.md §3): military and health
+  // as levels with embodied values, built and decaying by named lines.
+  function products(done) {
+    at("products");
+    try {
+      var W = window.WORLD;
+      r.modals.productsRegistered = !!window.PRODUCTS && W.pillarList().some(function (p) { return p.name === "products"; });
+      W.newWorld(9001); W.advanceDays(60);
+      var fr = W.COUNTRY_STATE.FR, L = W.ledgerOf("FR");
+      r.modals.productsRun = !!fr && fr.mil > 0 && fr.hea > 0 && fr.milT > 0 && fr.milP > 0 && L.get("products.mil.level") === fr.mil;
+      r.modals.productsHealth = fr._deathMul > 0 && fr._deathMul < 1 && fr._birthMul > 1 && L.get("economy.deaths") > 0;
+      r.modals.productsBudget = L.get("economy.spend.military") >= 0 && typeof fr.shares.health === "number" && typeof fr.shares.military === "number";
+      r.modals.productsCensus = typeof W.censusOf("FR").mil === "number" && typeof W.censusWorld().heaMean === "number";
+      r.modals.productsConfig = typeof window.ENTITY_CONFIG.milCostMoney === "number";
+      var m1 = fr.mil, h1 = fr.hea; W.newWorld(9001); W.advanceDays(60);
+      r.modals.productsRepeat = W.COUNTRY_STATE.FR.mil === m1 && W.COUNTRY_STATE.FR.hea === h1;
+      r.modals.productsLayers = !!document.querySelector('#mapLegend .layers button[data-layer="military"]') && !!document.querySelector('#mapLegend .layers button[data-layer="health"]');
+      window.ENTITY.openCountryModal("FR");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="products"]');
+      r.modals.productsCard = !!det && det.querySelectorAll(".row").length >= 3;
+      esc();
+      $("saveBtn").click();
+      var saved = JSON.parse(localStorage.getItem("entity_save_v3") || "null");
+      r.modals.productsSave = !!saved && typeof saved.countries.FR.mil === "number" && typeof saved.countries.FR.mlt === "number";
+      localStorage.removeItem("entity_save_v3");
+      W.newWorld();
+      done();
+    } catch (e) { r.modals.productsRun = false; r.modals.productsError = String(e); done(); }
+  }
   // --eval: wait for the map (links need it), run the caller's code with the
   // result object as `r`, and store what it returns (a promise is awaited).
   function evalRun() {
@@ -495,7 +524,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { saveLoad(finish); }); }); }); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { products(function () { saveLoad(finish); }); }); }); }); }); }); });
   });
 })();
 </script>

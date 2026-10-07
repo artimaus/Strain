@@ -130,7 +130,7 @@ const seedRng = iso => C.mulberry32(hash32(WORLD_STATE.seed, hashStr(String(iso)
        config: { group, defaults: {key: value}, rows: [[key, label, unit]] }
      })
    Every hook is optional.  An empty slot is skipped. */
-const ORDER = ["weather", "economy", "trade", "health", "relations", "war"];
+const ORDER = ["weather", "economy", "products", "trade", "health", "relations", "war"];
 const pillars = Object.create(null);
 function registerPillar(p) {
   if (!p || !ORDER.includes(p.name)) throw new Error("a pillar's name must be one of " + ORDER.join(", "));

@@ -65,7 +65,7 @@ function dailyWorld(rng, LW) {
     const spare = Math.max(0, slots.I - Le.get("economy.workInfra") - reserved);
     let idle = Le.get("economy.idle"), exporters = 0;
     const fed = Le.get("economy.famine") <= 0.02;                 // nobody exports food out of a famine; the energy left in store limits the rest
-    const broke = (Le.get("economy.econPaid") < 0.98 || !fed) && s.treasury < Le.get("economy.held") + 1e-9;   // unpaid and without the month's bill in hand
+    const broke = (Le.get("economy.econPaid") < E.K.shortLine || !fed) && s.treasury < Le.get("economy.held") + 1e-9;   // unpaid and without the month's bill in hand
     // the resource that pays best per unit of effort, net of the energy it costs, among those a linked nation asked
     // for yesterday: the market is local, so a nation exports to the asks it can reach, not to the world's price alone
     const st = s._strain || [0, 0, 0], cE = E.captureEnergyPer(s), cpw = E.cpw(s), dem = s._demand || [0, 0, 0];
@@ -100,12 +100,14 @@ function dailyWorld(rng, LW) {
     if (why) add(iso, "exportShift", "export reserve", target - (s.exportWorkers || 0), "M", why);
     s.exportWorkers = target;
     // use a day, per resource: what the economy tried to use today
-    const useR = [N.food, N.upkE + N.techE + Le.get("economy.captureEnergy"), N.upkM];
+    const prodUse = window.PRODUCTS ? window.PRODUCTS.upkeepOf(s) : [0, 0, 0];
+    const useR = [N.food + prodUse[0], N.upkE + N.techE + Le.get("economy.captureEnergy") + prodUse[1], N.upkM + prodUse[2]];
     need[iso] = useR;
     const a = [0, 0, 0], o = [0, 0, 0];
     a[0] = Le.get("economy.famine") * N.food;
     a[1] = Math.max(0, N.upkE + N.techE - Le.get("economy.upkeep.energy"));
     a[2] = Math.max(0, N.upkM - Le.get("economy.upkeep.materials"));
+    if (s._prodAsk) for (let r = 0; r < 3; r++) a[r] += s._prodAsk[r];   // what the army and the hospitals went without (js/products.js)
     for (let r = 0; r < 3; r++) {
       // a nation that is unpaid and cannot pay its bill sells its stores down to a few days of whatever it is not short of
       const shortOf = a[r] > 0;

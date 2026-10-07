@@ -414,13 +414,126 @@ deal as a share of use (2%).
 - Deals are never renegotiated; a deal's price can be far from the
   world's by its end.
 
-## 3. Health and the outbreak
+## 3. End products: military and health
 
-Not built. Phase 3; its questions are `design.md` §5.2.
+Owner: `js/products.js`, with the economy's budget, people step and
+technology upkeep in `js/economy.js`. Design: `design.md` §5.7. Built
+in phase 3, October 2026.
 
-## 4. Pressure on the player
+### What it does
 
-Not built. Phase 4; its questions are `design.md` §5.3.
+**State** (rows added to the country pack table): `mil` and `hea`
+(levels), `milT`, `heaT` (embodied technology), `milP`, `heaP`
+(embodied population), `atWar` (false until the war pillar). The
+economy adds `milFloor`, the nation's military share floor, and two
+budget shares, `military` and `health`.
+
+**Seeding.** The levels from the rows' military and medical columns
+with ±5% noise; the embodied values at the nation's starting
+technology and population.
+
+**The day** (`daily`, after the economy's), per product:
+
+1. *Build.* The economy set aside `spend × share` for the product; the
+   price per point is `cost × pop × (1 + level / productSlow)` in money
+   and in materials, both from the levers; the rise is what the money
+   and the materials in store allow, the lesser; money the materials
+   did not allow returns to the treasury. On a rise, the embodied
+   technology and population move: `new = (L × old + rise × today's) /
+   (L + rise)`.
+2. *Upkeep.* Per resource, `level × rate × (pop + 2 × infrastructure
+   units) × (1 − 0.5 × tech / 100)`: the military draws materials
+   always, energy and food only at war; health draws energy and
+   materials. When a resource is short, the economy and the products
+   pay their upkeep pro rata (the economy leaves the products' share
+   in the store and builds only with what is left after it); among the
+   products the share is pro rata too, and every product's upkeep and
+   decay are settled before any product builds. What a product
+   wanted and did not get, and the materials the money could have
+   bought points with, join the nation's ask on the market.
+3. *Decay*, named causes added: `decayUnpaid × (1 − paid)` per
+   resource unpaid; `decayDilute × (pop − embodied pop) / embodied pop`
+   when the people outgrow the pool; `decayObsolete × (tech −
+   embodied tech) / 100` when the nation's technology runs ahead of
+   what is built in.
+4. *The effect when used* is `level / 100 × (1 + embodied tech / 100)
+   × min(1, embodied pop / pop)`. Health's effect sets two multipliers
+   the economy's people step reads the next day: deaths × (1 −
+   `healthDeaths` × effect), births × (1 + `healthBirths` × effect). A
+   base mortality (`baseDeath`, 0.00003 a day) joined the people step
+   so health has something to lower besides famine.
+
+**The budget.** Shares start at infrastructure 25%, economy 25%,
+research 15%, keep 10%, exploration 5%, military 10%, health 10%. The
+military share's floor is `0.03 + 0.12 × the row's military level /
+100`, a stand-in for threat until relations and war; health's floor is
+5%. A new rule, between "no room" and "idle hands": deaths above
+`deathsLine` (0.00004 a day per person) turn the budget to health
+("deaths running high"). *To revisit with regimes (`design.md` §5.8).*
+
+**Technology**, reworked here: its energy upkeep is `techUpkeepEnergy ×
+tech / 100 × (pop + 0.5 × economy units + 0.5 × infrastructure
+units)`, not cut by its own level; a flat `techFade` (0.00002 a day)
+is forgotten every day, which academia must outrun; research goes on
+when a nation is short, since it is not a unit to power.
+
+**The card** (`rows`): per product the level, its embodied technology
+and population, today's rise and decay with the causes, the unpaid
+upkeep; and what health does to deaths and births. **Layers** Mil and
+Health. **Wire**: a product fallen more than 15 points behind its
+technology; hospitals built for fewer than 85% of the people.
+**Census**: `mil`, `hea`, `milBehind` (the technology gap), `heaFit`
+(the pool share); world means weighted by population.
+
+### What it touches
+
+Reads the economy's state (population, infrastructure, technology,
+treasury, stores) and its budget lines; writes its own fields, the
+stores and the treasury, the two multipliers and the ask the trade
+pillar reads. The economy reserves its materials upkeep and counts its
+upkeep and building materials in the reserve calibration
+(`upkeepOf`, `buildMaterialsPerMoney`).
+
+### Defaults and levers
+
+Config rows, group "Products":
+
+| Lever | Default | Meaning |
+|---|---|---|
+| `milCostMoney`, `milCostMaterials` | 20, 0.5 | per point per million people at level 0 |
+| `heaCostMoney`, `heaCostMaterials` | 20, 0.3 | the same for health |
+| `productSlow` | 50 | the level that doubles a point's price |
+| `milUpkeepMaterials` | 0.0003 | per point per million people (plus the infrastructure term) a day |
+| `milUpkeepEnergy`, `milUpkeepFood` | 0.0003, 0.0005 | the same, at war only |
+| `heaUpkeepEnergy`, `heaUpkeepMaterials` | 0.0003, 0.0002 | health's upkeep |
+| `decayUnpaid` | 0.002 | share of the level lost a day per unit of upkeep unpaid |
+| `decayDilute` | 0.0015 | per unit of population gap |
+| `decayObsolete` | 0.003 | per unit of technology gap |
+| `healthDeaths`, `healthBirths` | 0.6, 0.5 | what full health does to deaths and births |
+
+Fixed in `K`: the infrastructure weight in an upkeep (2 million people
+per unit), technology's cut of an upkeep (50% at level 100), the
+technology multiplier on an effect (1 + embodied / 100), the wire's
+lines (15 points behind; 85% of the people). In the economy's `K`: the
+military floor's slope, the base mortality, the deaths line, the
+technology fade and the weights of economy and infrastructure in its
+upkeep.
+
+### Assumptions built in
+
+- A level has no people in it; the army and the hospitals are
+  capacities, not employers, until war says otherwise.
+- Only building refreshes the embodied values; maintenance does not.
+- Nobody is first in line for a short resource: the economy and the
+  products take the same unpaid share; building comes after all of
+  them.
+- The military has no effect yet; its level is a capacity waiting for
+  the war pillar.
+
+## 4. The outbreak pass
+
+Not built. Deferred as a pass of its own (`plan.md` phase 4); its
+questions are `design.md` §5.2 and §5.3.
 
 ## 5. Relations and alliances
 
@@ -429,3 +542,7 @@ Not built. Phase 5; its questions are `design.md` §5.4.
 ## 6. War and the military
 
 Not built. Phase 6; its questions are `design.md` §5.5.
+
+## 7. Regimes and their goals
+
+Not built. Phase 7; the design is `design.md` §5.8.

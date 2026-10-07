@@ -520,6 +520,50 @@ effect       = L · techMultiplier(embT) · min(1, embP / P)
 cost / point = (baseMoney, baseMaterials) · P · (1 + L / slow)
 ```
 
+**As built (phase 3, 7 October 2026).** The products pillar
+(`nations.md` §3) and what the census forced on the way:
+
+- The reserve calibration counts the products' upkeep and the
+  materials their building takes, or the world is materials-short from
+  day one and nothing gets built.
+- Upkeep before building, and nobody first in line: when a resource is
+  short the economy and the products pay the same share of their
+  upkeep (the economy leaves the products' share in the store and
+  builds only with what remains), and among the products the share is
+  pro rata; every product's upkeep and decay are settled before any
+  product builds. Without this the economy ate the imports and the
+  military the rest, and health went to nothing everywhere.
+- What a product wanted and did not get, and the materials its money
+  could have bought points with, join the nation's ask on the market.
+- Research goes on when a nation is short; it is not a unit to power.
+- The short line is 90% of upkeep paid: below it a nation holds its
+  building and the census flags it; at 98% the pro-rata sharing made
+  a quarter of the world read short.
+- Rates: a point costs 20 money and 0.5 (military) or 0.3 (health)
+  materials per million people at level 0, doubling by level 50;
+  upkeep 0.0003 materials per point per million people (the military;
+  energy and food only at war) and 0.0003 energy plus 0.0002 materials
+  (health), with a unit of infrastructure counting as two million
+  people; decay 0.002 per unit unpaid, 0.0015 per unit of population
+  gap, 0.003 per unit of technology gap; full health cuts deaths by
+  60% and raises births by 50%; the base mortality is 0.00003 a day;
+  technology's energy upkeep is 0.1 per point per 100 million people
+  plus half as much per unit of economy and of infrastructure, and it
+  forgets 0.00002 of itself a day.
+
+**Census** (six seeds, three years, 7 October 2026): people 8,268 to
+8,273 M; famine in 2 nations (Singapore, the Maldives); short 8 to 12
+(Taiwan, South Korea, Saudi Arabia, Algeria, India, the Emirates: the
+materials now shared with their products); world income 52,000 to
+56,000 a day (56,000 to 63,000 before the products' upkeep); mean
+technology 58 to 62; mean military 64 to 66, from about 50 at seed,
+the United States past 100 on its 15% floor; mean health 41 to 44,
+from about 55 at seed, the rich near 90 (France and the United States
+at 90 within a year, deaths at 40% of the base) and the poor decaying
+for want of energy and materials; prices in surplus; 2,450 to 2,560
+units traded a day; 236 to 288 deals. India's technology halves in
+three years: unpowered, it decays at the economy's unpaid rate.
+
 ### 5.8 Regimes and their goals: as decided, 6 October 2026
 
 Regimes decide their preferences and goals by a genetic algorithm,
