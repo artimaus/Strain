@@ -434,21 +434,26 @@ technology and population.
 
 **The day** (`daily`, after the economy's), per product:
 
-1. *Build.* The economy set aside `spend × share` for the product; the
-   price per point is `cost × pop × (1 + level / productSlow)` in money
-   and in materials, both from the levers; the rise is what the money
-   and the materials in store allow, the lesser; money the materials
-   did not allow returns to the treasury. On a rise, the embodied
-   technology and population move: `new = (L × old + rise × today's) /
-   (L + rise)`.
-2. *Upkeep.* Per resource, `level × rate × (pop + 2 × infrastructure
-   units) × (1 − 0.5 × tech / 100)`: the military draws materials
-   always, energy and food only at war; health draws energy and
-   materials. When a resource is short, the economy and the products
-   pay their upkeep pro rata (the economy leaves the products' share
-   in the store and builds only with what is left after it); among the
-   products the share is pro rata too, and every product's upkeep and
-   decay are settled before any product builds. What a product
+1. *Build.* The economy set aside `spend × share` for the product. A
+   point is priced in labour and in materials, both up one curve: money
+   `costDays × pop × wage × e^(level / productScale)`, where the wage is
+   money per economy worker-day (`moneyPerWorker × (1 + tech / 100)`),
+   so a poor nation builds with cheap labour; materials `costMaterials
+   × pop × e^(level / productScale)`. With `productScale` 30 the price
+   doubles every 21 points: cheap at the bottom, dear at the top. The
+   rise is what the money and the materials in store allow, the lesser;
+   money the materials did not allow returns to the treasury. On a
+   rise, the embodied technology and population move: `new = (L × old +
+   rise × today's) / (L + rise)`.
+2. *Upkeep.* Per resource, `(e^(level / productScale) − 1) × rate ×
+   (pop + 2 × infrastructure units) × (1 − 0.5 × tech / 100)`: the
+   same skew as the price, nothing to keep at level 0. The military
+   draws materials always, energy and food only at war; health draws
+   energy and materials. The economy's own upkeep is paid first, since
+   it earns the money everything else is bought with; the products take
+   what is left, pro rata among themselves, and the economy builds only
+   with what remains after the products' upkeep; every product's upkeep
+   and decay are settled before any product builds. What a product
    wanted and did not get, and the materials the money could have
    bought points with, join the nation's ask on the market.
 3. *Decay*, named causes added: `decayUnpaid × (1 − paid)` per
@@ -500,12 +505,12 @@ Config rows, group "Products":
 
 | Lever | Default | Meaning |
 |---|---|---|
-| `milCostMoney`, `milCostMaterials` | 20, 0.5 | per point per million people at level 0 |
-| `heaCostMoney`, `heaCostMaterials` | 20, 0.3 | the same for health |
-| `productSlow` | 50 | the level that doubles a point's price |
-| `milUpkeepMaterials` | 0.0003 | per point per million people (plus the infrastructure term) a day |
-| `milUpkeepEnergy`, `milUpkeepFood` | 0.0003, 0.0005 | the same, at war only |
-| `heaUpkeepEnergy`, `heaUpkeepMaterials` | 0.0003, 0.0002 | health's upkeep |
+| `milCostDays`, `milCostMaterials` | 1.5, 0.5 | a point at level 0: worker-days per person at the wage; materials per million people |
+| `heaCostDays`, `heaCostMaterials` | 1.5, 0.3 | the same for health |
+| `productScale` | 30 | points per e-fold of price and upkeep (a doubling every 21) |
+| `milUpkeepMaterials` | 0.0016 | per million people (plus the infrastructure term) a day, at one e-fold |
+| `milUpkeepEnergy`, `milUpkeepFood` | 0.0016, 0.0025 | the same, at war only |
+| `heaUpkeepEnergy`, `heaUpkeepMaterials` | 0.0016, 0.001 | health's upkeep |
 | `decayUnpaid` | 0.002 | share of the level lost a day per unit of upkeep unpaid |
 | `decayDilute` | 0.0015 | per unit of population gap |
 | `decayObsolete` | 0.003 | per unit of technology gap |
@@ -524,9 +529,10 @@ upkeep.
 - A level has no people in it; the army and the hospitals are
   capacities, not employers, until war says otherwise.
 - Only building refreshes the embodied values; maintenance does not.
-- Nobody is first in line for a short resource: the economy and the
-  products take the same unpaid share; building comes after all of
-  them.
+- The economy's upkeep is first in line for a short resource, the
+  products share what is left, and building comes after all of them.
+  Paying the army before the economy was tried and starved the nations
+  that live on imports.
 - The military has no effect yet; its level is a capacity waiting for
   the war pillar.
 

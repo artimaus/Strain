@@ -183,16 +183,15 @@ function daily(iso, rng, L) {
   let eAvail = got[1] + s.stores[1] - capE;
   const techPaid = Math.min(N.techE, Math.max(eAvail, 0)); eAvail -= techPaid;
   let mAvail = got[2] + s.stores[2];
-  // the economy works to the share of its upkeep it can pay in BOTH energy and materials, and pays only for that share;
-  // when a resource is short it shares it pro rata with the end products (js/products.js), whose share stays in the store
+  // the economy works to the share of its upkeep it can pay in BOTH energy and materials, and pays only for that share.
+  // Its upkeep comes first: it is what earns the money everything else is bought with (a nation living on imports
+  // that shared with its army spiralled down).  The end products (js/products.js) take what is left, before building.
   const prodWant = window.PRODUCTS ? window.PRODUCTS.upkeepOf(s) : [0, 0, 0];
-  const shareE = N.upkE + prodWant[1] > 0 ? Math.min(1, Math.max(eAvail, 0) / (N.upkE + prodWant[1])) : 1;
-  const shareM = N.upkM + prodWant[2] > 0 ? Math.min(1, mAvail / (N.upkM + prodWant[2])) : 1;
-  const paid = Math.min(shareE, shareM);
+  const paid = Math.min(1, N.upkE > 0 ? Math.max(eAvail, 0) / N.upkE : 1, N.upkM > 0 ? mAvail / N.upkM : 1);
   const econE = paid * N.upkE, econM = paid * N.upkM;
   eAvail -= econE; mAvail -= econM;
   s.stores[1] = Math.max(eAvail, 0);
-  const techOk = N.techE <= 0 || techPaid >= N.techE - 1e-9;
+  const techShare = N.techE > 0 ? techPaid / N.techE : 1, techOk = techShare >= 0.999;
   add("upkeep.energy", "upkeep paid in energy", techPaid + econE, "units"); add("upkeep.materials", "upkeep paid in materials", econM, "units");
   add("econPaid", "economy paid", paid, "share"); add("techPaid", "technology paid", techOk ? 1 : 0, "");
   const wasPaid = s.unpaidEcon === 0, wasTechPaid = s.unpaidTech === 0;
@@ -200,7 +199,7 @@ function daily(iso, rng, L) {
   s.unpaidTech = techOk ? 0 : s.unpaidTech + 1;
   let decayE = 0, decayT = 0;
   if (s.unpaidEcon > K.unpaidGrace) { decayE = s.econ * K.unpaidDecay * (1 - paid); s.econ -= decayE; }
-  if (s.unpaidTech > K.unpaidGrace) { decayT = s.tech * K.unpaidDecay; s.tech -= decayT; }
+  if (s.unpaidTech > K.unpaidGrace) { decayT = s.tech * K.unpaidDecay * (1 - techShare); s.tech -= decayT; }   // in proportion to the shortfall
   if (decayE) add("decay.econ", "economy decayed", decayE, "units"); if (decayT) add("decay.tech", "technology decayed", decayT, "pts", "unpowered");
   const fade = s.tech * K.techFade; s.tech -= fade;               // knowledge forgotten without schools: academia must outrun it
   add("fade.tech", "technology forgotten", fade, "pts");
@@ -218,7 +217,7 @@ function daily(iso, rng, L) {
   // a nation short of its upkeep builds no units it cannot power: only exploration goes on
   const build = wentShort ? 0 : spend;
   // upkeep before building: the materials the end products need today stay in the store for them (js/products.js runs next)
-  const buildable = Math.max(0, mAvail - prodWant[2] * paid);
+  const buildable = Math.max(0, mAvail - prodWant[2]);
   let unitsI = build * sh.infra / K.infraCostMoney;
   const mForI = Math.min(buildable, unitsI * K.infraCostMaterials); unitsI = mForI / K.infraCostMaterials; mAvail -= mForI;
   const unitsE = build * sh.econ / K.econCostMoney;
@@ -351,10 +350,11 @@ const slotsOf = s => { const c = cfg(); return { I: c.infraSlots * s.infra, E: c
 const cpwOf = s => cfg().capturePerWorker * tmul(s, "techCapture");
 const captureEnergyPer = s => cfg().captureEnergy * tdown(s, "techEnergy");
 const capture = (s, r, effort) => captured(effort, s.ceil[r]);
+const wageOf = s => cfg().moneyPerWorker * tmul(s, "techMoney");   // money an economy worker-day earns at full pay
 
 window.ECONOMY = W.registerPillar({
   name: "economy", label: "Economy", fields: FIELDS, seed, daily, rows, census, censusWorld, layers,
   config: { group: "Economy", defaults: LEVERS, rows: ROWS },
-  K, LEVERS, calibrate, needs, slotsOf, cpw: cpwOf, captureEnergyPer, capture,
+  K, LEVERS, calibrate, needs, slotsOf, cpw: cpwOf, captureEnergyPer, capture, wageOf,
 });
 })();

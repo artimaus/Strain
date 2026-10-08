@@ -20,22 +20,22 @@ const cfg = () => window.ENTITY_CONFIG || LEVERS;
 
 /* ── Levers: the config panel's Products group ── */
 const LEVERS = {
-  milCostMoney: 20, milCostMaterials: 0.5,             // per point per million people at level 0
-  heaCostMoney: 20, heaCostMaterials: 0.3,
-  productSlow: 50,                                     // the level that doubles the price of a point
-  milUpkeepMaterials: 0.0003,                          // per point, per million people (plus the infrastructure term), a day
-  milUpkeepEnergy: 0.0003, milUpkeepFood: 0.0005,      // the same, drawn only in wartime
-  heaUpkeepEnergy: 0.0003, heaUpkeepMaterials: 0.0002,
+  milCostDays: 1.5, milCostMaterials: 0.5,             // a point at level 0: worker-days per person at the nation's wage; materials per million people
+  heaCostDays: 1.5, heaCostMaterials: 0.3,
+  productScale: 30,                                    // the price and the upkeep grow e-fold every this many points (doubling every 21)
+  milUpkeepMaterials: 0.0016,                          // per million people (plus the infrastructure term) a day, times (e^(level/scale) - 1)
+  milUpkeepEnergy: 0.0016, milUpkeepFood: 0.0025,      // the same, drawn only in wartime
+  heaUpkeepEnergy: 0.0016, heaUpkeepMaterials: 0.001,
   decayUnpaid: 0.002, decayDilute: 0.0015, decayObsolete: 0.003,   // share of the level lost a day per unit of each cause
   healthDeaths: 0.6, healthBirths: 0.5,                // what full health does to deaths (down) and births (up)
 };
 const ROWS = [
-  ["milCostMoney", "military · money per point per M", "money"], ["milCostMaterials", "military · materials per point per M", "units"],
-  ["heaCostMoney", "health · money per point per M", "money"], ["heaCostMaterials", "health · materials per point per M", "units"],
-  ["productSlow", "level that doubles a point's price", "pts"],
-  ["milUpkeepMaterials", "military upkeep · materials per point per M", "units/day"],
+  ["milCostDays", "military · worker-days per person per point", "days"], ["milCostMaterials", "military · materials per point per M", "units"],
+  ["heaCostDays", "health · worker-days per person per point", "days"], ["heaCostMaterials", "health · materials per point per M", "units"],
+  ["productScale", "points per e-fold of price and upkeep", "pts"],
+  ["milUpkeepMaterials", "military upkeep · materials per M at e-fold", "units/day"],
   ["milUpkeepEnergy", "military upkeep · energy, in war", "units/day"], ["milUpkeepFood", "military upkeep · food, in war", "units/day"],
-  ["heaUpkeepEnergy", "health upkeep · energy per point per M", "units/day"], ["heaUpkeepMaterials", "health upkeep · materials per point per M", "units/day"],
+  ["heaUpkeepEnergy", "health upkeep · energy per M at e-fold", "units/day"], ["heaUpkeepMaterials", "health upkeep · materials per M at e-fold", "units/day"],
   ["decayUnpaid", "decay per unit of upkeep unpaid", "/day"], ["decayDilute", "decay per unit of population gap", "/day"], ["decayObsolete", "decay per unit of technology gap", "/day"],
   ["healthDeaths", "full health cuts deaths by", "share"], ["healthBirths", "full health raises births by", "share"],
 ];
@@ -47,15 +47,19 @@ const K = {
   behindLine: 15, strainedLine: 0.85,   // wire: the technology gap that counts as behind; the pool share that counts as strained
 };
 const PRODUCTS = [
-  { key: "mil", label: "military", row: r => r.st.military, cost: ["milCostMoney", "milCostMaterials"],
+  { key: "mil", label: "military", row: r => r.st.military, cost: ["milCostDays", "milCostMaterials"],
     upkeep: s => [s.atWar ? "milUpkeepFood" : null, s.atWar ? "milUpkeepEnergy" : null, "milUpkeepMaterials"], budget: "military" },
-  { key: "hea", label: "health", row: r => r.st.medical, cost: ["heaCostMoney", "heaCostMaterials"],
+  { key: "hea", label: "health", row: r => r.st.medical, cost: ["heaCostDays", "heaCostMaterials"],
     upkeep: s => [null, "heaUpkeepEnergy", "heaUpkeepMaterials"], budget: "health" },
 ];
 const RES = ["food", "energy", "materials"];
 const FIELDS = [["mil", "mil", 0], ["milT", "mlt", 0], ["milP", "mlp", 0], ["hea", "hea", 0], ["heaT", "het", 0], ["heaP", "hep", 0], ["atWar", "war", false]];
 const f = (v, d) => (+v || 0).toFixed(d == null ? 1 : d);
 const tdown = s => 1 - K.techUpkeep * Math.min(s.tech, 100) / 100;
+/* the skew: price and upkeep grow e-fold every productScale points, so the bottom is cheap and the top dear */
+const curve = (lvl, c) => Math.exp(Math.max(0, lvl) / c.productScale);
+const upkeepCurve = (lvl, c) => curve(lvl, c) - 1;                 // nothing to keep at level 0
+const wageOf = s => E.wageOf(s);                                   // money per economy worker-day, what a point's labour is priced at
 
 function seed(iso, s, rng) {
   const r = D.rowOf(iso), noise = () => 1 + (rng() * 2 - 1) * K.seedNoise;
@@ -71,12 +75,12 @@ function seed(iso, s, rng) {
    budget money turns into when the products are built, so the world's ceilings count them. */
 function upkeepOf(s) {
   const c = cfg(), scale = s.pop + K.upkeepInfraWeight * s.infra, out = [0, 0, 0];
-  for (const p of PRODUCTS) { const need = p.upkeep(s); for (let r = 0; r < 3; r++) if (need[r]) out[r] += (s[p.key] || 0) * c[need[r]] * scale * tdown(s); }
+  for (const p of PRODUCTS) { const need = p.upkeep(s); for (let r = 0; r < 3; r++) if (need[r]) out[r] += upkeepCurve(s[p.key] || 0, c) * c[need[r]] * scale * tdown(s); }
   return out;
 }
 function buildMaterialsPerMoney(s) {
   const c = cfg(), E = window.ECONOMY; let t = 0;
-  for (const p of PRODUCTS) t += (E ? E.K.shares0[p.budget] : 0.1) * c[p.cost[1]] / Math.max(c[p.cost[0]], 1e-6);
+  for (const p of PRODUCTS) t += (E ? E.K.shares0[p.budget] : 0.1) * c[p.cost[1]] / Math.max(c[p.cost[0]] * wageOf(s), 1e-6);   // the curve cancels: both prices climb together
   return t;
 }
 /* The effect of a level when used: at its embodied technology and for the pool it was built for. */
@@ -91,7 +95,7 @@ function daily(iso, rng, L) {
   const scale = s.pop + K.upkeepInfraWeight * s.infra;          // what an upkeep scales with
   const askFor = [0, 0, 0];                                       // what the products wanted and did not get today: the trade pillar asks for it
   // when a resource is short the products share it pro rata, so the first in line does not take it all
-  const wants = PRODUCTS.map(p => { const need = p.upkeep(s); return need.map(lv => lv ? (s[p.key] || 0) * c[lv] * scale * tdown(s) : 0); });
+  const wants = PRODUCTS.map(p => { const need = p.upkeep(s); return need.map(lv => lv ? upkeepCurve(s[p.key] || 0, c) * c[lv] * scale * tdown(s) : 0); });
   const shareOf = [0, 1, 2].map(r => { const tot = wants.reduce((t, w) => t + w[r], 0); return tot > 0 ? Math.min(1, s.stores[r] / tot) : 1; });
   // 1. upkeep and decay for every product first, so nothing is built with the materials an upkeep needed
   for (const p of PRODUCTS) {
@@ -100,7 +104,7 @@ function daily(iso, rng, L) {
     const need = p.upkeep(s), paid = [1, 1, 1];
     for (let r = 0; r < 3; r++) {
       const lever = need[r]; if (!lever) continue;
-      const want = s[k] * c[lever] * scale * tdown(s);
+      const want = upkeepCurve(s[k], c) * c[lever] * scale * tdown(s);
       if (!(want > 0)) continue;
       const got = Math.min(want * shareOf[r], s.stores[r]); s.stores[r] -= got; paid[r] = got / want; askFor[r] += want - got;
       add(k + ".upkeep." + RES[r], p.label + " upkeep in " + RES[r], got, "units", paid[r] < 0.999 ? Math.round((1 - paid[r]) * 100) + "% unpaid" : "");
@@ -123,7 +127,7 @@ function daily(iso, rng, L) {
     const k = p.key, lvl = s[k];
     // 3. build with the money the budget set aside, and materials from the store; the price per point rises with the level
     const money = s["_budget_" + k] || 0;
-    const perPoint = [c[p.cost[0]] * s.pop * (1 + lvl / c.productSlow), c[p.cost[1]] * s.pop * (1 + lvl / c.productSlow)];
+    const perPoint = [c[p.cost[0]] * s.pop * wageOf(s) * curve(lvl, c), c[p.cost[1]] * s.pop * curve(lvl, c)];   // labour at the wage, and materials, both up the curve
     let rise = Math.min(money / perPoint[0], perPoint[1] > 0 ? s.stores[2] / perPoint[1] : Infinity);
     if (!(rise > 0)) rise = 0;
     const spentMoney = rise * perPoint[0], spentMat = rise * perPoint[1];

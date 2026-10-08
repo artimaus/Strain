@@ -484,7 +484,7 @@ POST = """<script>
       r.modals.productsHealth = fr._deathMul > 0 && fr._deathMul < 1 && fr._birthMul > 1 && L.get("economy.deaths") > 0;
       r.modals.productsBudget = L.get("economy.spend.military") >= 0 && typeof fr.shares.health === "number" && typeof fr.shares.military === "number";
       r.modals.productsCensus = typeof W.censusOf("FR").mil === "number" && typeof W.censusWorld().heaMean === "number";
-      r.modals.productsConfig = typeof window.ENTITY_CONFIG.milCostMoney === "number";
+      r.modals.productsConfig = typeof window.ENTITY_CONFIG.milCostDays === "number";
       var m1 = fr.mil, h1 = fr.hea; W.newWorld(9001); W.advanceDays(60);
       r.modals.productsRepeat = W.COUNTRY_STATE.FR.mil === m1 && W.COUNTRY_STATE.FR.hea === h1;
       r.modals.productsLayers = !!document.querySelector('#mapLegend .layers button[data-layer="military"]') && !!document.querySelector('#mapLegend .layers button[data-layer="health"]');

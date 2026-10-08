@@ -526,13 +526,17 @@ cost / point = (baseMoney, baseMaterials) · P · (1 + L / slow)
 - The reserve calibration counts the products' upkeep and the
   materials their building takes, or the world is materials-short from
   day one and nothing gets built.
-- Upkeep before building, and nobody first in line: when a resource is
-  short the economy and the products pay the same share of their
-  upkeep (the economy leaves the products' share in the store and
-  builds only with what remains), and among the products the share is
-  pro rata; every product's upkeep and decay are settled before any
-  product builds. Without this the economy ate the imports and the
-  military the rest, and health went to nothing everywhere.
+- Upkeep before building: the economy pays its own upkeep first (it
+  earns the money everything else is bought with), the products take
+  what is left pro rata among themselves, and the economy builds only
+  with what remains after the products' upkeep; every product's upkeep
+  and decay are settled before any product builds. Without the
+  reservation the economy's building ate the imports and the military
+  the rest, and health went to nothing everywhere; sharing the upkeep
+  pro rata between the economy and the products was tried next and
+  spiralled the import-dependent nations (Japan's technology from 93 to
+  59 in three years), since it starved the income that paid for their
+  imports.
 - What a product wanted and did not get, and the materials its money
   could have bought points with, join the nation's ask on the market.
 - Research goes on when a nation is short; it is not a unit to power.
@@ -551,7 +555,21 @@ cost / point = (baseMoney, baseMaterials) · P · (1 + L / slow)
   plus half as much per unit of economy and of infrastructure, and it
   forgets 0.00002 of itself a day.
 
-**Census** (six seeds, three years, 7 October 2026): people 8,268 to
+**The progression round** (7 October 2026). The first census climbed
+the ladders too fast at the top (France's health 85 to 90 in a year,
+the United States' military past 100) and too slowly at the bottom
+(Nigeria 3 a year on a flat money price per head). Decided: a point is
+priced in labour, so many worker-days per person at the nation's own
+wage, so poor nations build with cheap labour and the climb at a given
+level depends only on the budget share; the price grows exponentially,
+e-fold every 30 points (doubling every 21), cheap at the bottom and
+dear at the top; upkeep follows the same curve, nothing to keep at
+level 0; the row levels stand as seeds. On a 10% share a nation climbs
+about 15 points a year at level 0, 3 at 50, half a point at 100; the
+rich hold where they start and the poor climb. Technology's unpowered
+decay became proportional to the unpaid share.
+
+**Census before the round** (six seeds, three years, 7 October 2026): people 8,268 to
 8,273 M; famine in 2 nations (Singapore, the Maldives); short 8 to 12
 (Taiwan, South Korea, Saudi Arabia, Algeria, India, the Emirates: the
 materials now shared with their products); world income 52,000 to
