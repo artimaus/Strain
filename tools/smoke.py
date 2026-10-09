@@ -362,13 +362,13 @@ POST = """<script>
       var health = { name: "health", label: "Test health", fields: [["tz", "tz", 0]],
         daily: function (iso, rng, L) { if (iso === "FR") { ran.push("health"); draws.push(rng()); L.add("health", "health.x", "x", W.day, "u"); } },
         rows: function (iso, L) { return [["x", L.get("health.x")]]; } };
-      var rel = { name: "relations", label: "Test relations",
-        daily: function (iso, rng, L) { if (iso === "FR") ran.push("relations"); } };
+      var rel = { name: "war", label: "Test war",
+        daily: function (iso, rng, L) { if (iso === "FR") ran.push("war"); } };
       W.registerPillar(rel); W.registerPillar(health);
       var fr = W.ensureCountry("FR");
       r.modals.pillarFields = fr.tz === 0 && W.COUNTRY_FIELDS.some(function (f) { return f[0] === "tz"; });
       W.newWorld(4242); W.advanceDays(3);
-      r.modals.pillarOrder = ran.join(",") === "health,relations,health,relations,health,relations";
+      r.modals.pillarOrder = ran.join(",") === "health,war,health,war,health,war";
       var L = W.ledgerOf("FR");
       r.modals.ledgerToday = L.day === W.day && L.get("health.x") === W.day && L.of("health").length === 1 && W.ledgerOf("DE").get("health.x") === 0;
       var d1 = draws.slice(); ran = []; draws = [];
@@ -382,7 +382,7 @@ POST = """<script>
       // the card: a section per pillar that offers rows, its open state remembered
       window.ENTITY.openCountryModal("FR");
       var det = $("cmBody").querySelector('details.pillar[data-pillar="health"]');
-      r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="relations"]');
+      r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="war"]');
       esc();
       // the save: a pillar field rides in the pack table, version 9
       fr = W.ensureCountry("FR"); fr.tz = 5;
@@ -397,7 +397,7 @@ POST = """<script>
         setTimeout(function () {
           r.modals.pillarFieldLoads = fr0 === 0 && W.ensureCountry("FR").tz === 5;
           localStorage.removeItem("entity_save_v3");
-          W.unregisterPillar("health"); W.unregisterPillar("relations");
+          W.unregisterPillar("health"); W.unregisterPillar("war");
           W.newWorld();
           done();
         }, 150);
@@ -448,7 +448,9 @@ POST = """<script>
       W.newWorld(9001); W.advanceDays(45);
       var fr = W.COUNTRY_STATE.FR, L = W.ledgerOf("FR");
       r.modals.economyRuns = !!fr && fr.pop > 60 && L.get("economy.income") > 0 && L.get("economy.captured.food") > 0 && fr.ceil[0] > 0 && fr.tech > 0;
-      r.modals.economyFeeds = L.get("economy.famine") === 0 && W.ledgerOf("SG").get("economy.famine") > 0;
+      var sg = W.COUNTRY_STATE.SG, sgAid = W.history("SG", "relations.aid.received", 45).reduce(function (t, v) { return t + v; }, 0);
+      // no reserves: starves, or lives on its neighbours' aid and loans once relations run
+      r.modals.economyFeeds = L.get("economy.famine") === 0 && (W.ledgerOf("SG").get("economy.famine") > 0 || (sg.debts && sg.debts.length > 0) || sgAid > 0);
       r.modals.economyReasons = typeof fr.reason === "string" && fr.reason.length > 0 && L.of("economy").some(function (l) { return l.reason; });
       r.modals.economyCensus = typeof W.censusOf("FR").tech === "number" && typeof W.censusWorld().famineNations === "number";
       var t1 = fr.treasury, p1 = fr.pop;
@@ -500,6 +502,40 @@ POST = """<script>
       done();
     } catch (e) { r.modals.productsRun = false; r.modals.productsError = String(e); done(); }
   }
+  // Phase 5: the relations pillar (docs/nations.md §5): views with a
+  // baseline and fading stocks, pacts, aid, loans, and trade that reads them.
+  function relations(done) {
+    at("relations");
+    try {
+      var W = window.WORLD, R = window.RELATIONS;
+      r.modals.relationsRegistered = !!R && W.pillarList().some(function (p) { return p.name === "relations"; });
+      var news = 0, onNews = function (e) { if (e.detail.kind === "relations") news++; };
+      addEventListener("entity:news", onNews);
+      W.newWorld(9001); W.advanceDays(200);
+      removeEventListener("entity:news", onNews);
+      var fr = W.COUNTRY_STATE.FR;
+      r.modals.relationsViews = typeof R.viewOf("FR", "DE") === "number" && R.viewOf("FR", "DE") > R.viewOf("FR", "CN") && typeof fr.temper === "number";
+      r.modals.relationsMoves = Object.keys(W.COUNTRY_STATE).some(function (iso) { var v = W.COUNTRY_STATE[iso].views; return v && Object.keys(v).length > 0; });
+      var LW = W.worldLedger();
+      r.modals.relationsPacts = LW.get("relations.pacts") > 0;
+      r.modals.relationsAidOrLoans = Object.keys(W.COUNTRY_STATE).some(function (iso) { var L = W.ledgerOf(iso); return L.get("relations.aid.received") > 0 || L.get("relations.borrowed") > 0; });
+      r.modals.relationsCensus = typeof W.censusOf("FR").allies === "number" && typeof W.censusWorld().pacts === "number";
+      var p1 = R.viewOf("FR", "DE"); W.newWorld(9001); W.advanceDays(200);
+      r.modals.relationsRepeat = R.viewOf("FR", "DE") === p1;
+      r.modals.relationsLayer = !!document.querySelector('#mapLegend .layers button[data-layer="relations"]');
+      window.ENTITY.openCountryModal("FR");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="relations"]');
+      r.modals.relationsCard = !!det && det.querySelectorAll(".row").length >= 3;
+      esc();
+      r.modals.relationsWire = news > 0;
+      $("saveBtn").click();
+      var saved = JSON.parse(localStorage.getItem("entity_save_v3") || "null");
+      r.modals.relationsSave = !!saved && Array.isArray(saved.countries.FR.pct) && typeof saved.countries.FR.vw === "object";
+      localStorage.removeItem("entity_save_v3");
+      W.newWorld();
+      done();
+    } catch (e) { r.modals.relationsViews = false; r.modals.relationsError = String(e); done(); }
+  }
   // --eval: wait for the map (links need it), run the caller's code with the
   // result object as `r`, and store what it returns (a promise is awaited).
   function evalRun() {
@@ -524,7 +560,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { products(function () { saveLoad(finish); }); }); }); }); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { products(function () { relations(function () { saveLoad(finish); }); }); }); }); }); }); }); });
   });
 })();
 </script>

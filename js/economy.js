@@ -211,9 +211,10 @@ function daily(iso, rng, L) {
   //    shortfall would cost at the world price, so the money is there for the market, and builds with the rest
   const prices = W.WORLD_STATE.prices || [1, 1, 1];
   const bill = famine * N.food * prices[0] + Math.max(0, N.upkE + N.techE - techPaid - econE) * prices[1] + Math.max(0, N.upkM - econM) * prices[2];
-  const held = Math.min(s.treasury, bill * K.holdDays), wentShort = famine > 0.02 || paid < K.shortLine;
+  const due = s._due || 0;                                        // a loan's repayment (js/relations.js) comes before building
+  const held = Math.min(s.treasury, bill * K.holdDays + due), wentShort = famine > 0.02 || paid < K.shortLine;
   const spend = Math.max(0, Math.min(s.treasury - held, cap)), sh = s.shares;
-  if (held > 0) add("held", "kept for the market", held, "money", (famine > 0.02 ? "famine" : "upkeep unpaid") + ": a month of the bill");
+  if (held > 0) add("held", "kept for the market", held, "money", (bill > 0 ? (famine > 0.02 ? "famine" : "upkeep unpaid") + ": a month of the bill" : "") + (due > 0 ? (bill > 0 ? " and " : "") + "a loan's repayment" : ""));
   // a nation short of its upkeep builds no units it cannot power: only exploration goes on
   const build = wentShort ? 0 : spend;
   // upkeep before building: the materials the end products need today stay in the store for them (js/products.js runs next)
@@ -273,6 +274,7 @@ function daily(iso, rng, L) {
   SHARES.forEach(k => add("share." + k, "share · " + k, sh[k], "", k === rule ? reason : ""));
   // runtime readouts for the card, the layers and the census
   s._idle = idle; s._famine = famine; s._paid = paid; s._strain = strain; s._income = income; s._housing = housing;
+  s._bill = bill;                                                // a day's shortfall at world prices: what the relations pillar lends against
   s._famineDays = famine > 0.02 ? (s._famineDays || 0) + 1 : (s._famineDays || 0);
   // the wire: transitions only
   const name = W.nameOf(iso), big = s.pop >= 50;

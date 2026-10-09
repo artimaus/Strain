@@ -543,7 +543,160 @@ questions are `design.md` §5.2 and §5.3.
 
 ## 5. Relations and alliances
 
-Not built. Phase 5; its questions are `design.md` §5.4.
+Owner: `js/relations.js`, with hooks in `js/trade.js` (deal order,
+deal formation, refusals, arrivals) and `js/economy.js` (the day's
+shortfall bill and a loan's repayment held before building). Design:
+`design.md` §5.4. Built in phase 5, October 2026.
+
+### What it does
+
+**State** (rows added to the country pack table): `views` (the other
+nation's code to `{ g, v }`: goodwill and grievance, kept only while
+either is above 0.05), `pacts` (codes of its allies), `warm` (days a
+pair has been above the pact line), `temper` (0 open to 1 hawkish),
+`debts` (`{ to, amount, since, lastPaid }`) and `defaulted` (the day
+of its last default). Nothing is stored for the world.
+
+**Seeding.** Temperament from the data row: `authority / 100 × (1 −
+freedom / 100) × 2`, clamped to 0..1, so a row at authority 85 and
+freedom 8 is 1.0 (China, Russia) and one at 32 and 86 is 0.09
+(France). The card calls 0.6 and above *hawkish*, 0.35 to 0.6 *wary*,
+below *open*; on seed 11 that is 80, 38 and 76 nations. Regimes will
+carry this as a gene (phase 7).
+
+**A view** is one nation's opinion of another, −100 to 100, and the
+two directions differ: `view(a, b) = baseline(a, b) + goodwill −
+grievance`, clamped.
+
+- *The baseline* never moves: +15 for the same region, +10 for a land
+  border, and +10 − 0.4 × the government distance, where the distance
+  is the mean of the two rows' freedom gap and authority gap. France
+  and Germany (distance 3) start at 15 + 10 + 8.8 = 33.8; the United
+  States and Mexico at 15 + 10 + 4 = 29; China and Switzerland, two
+  regions and a distance near 80, at −22. Baselines are cached per
+  pair once the links are built.
+- *Goodwill and grievance* are stocks that fade by 1% a day (`relFade`)
+  and are capped at 100, so a steady cause settles at 100 × its daily
+  rate. What moves them:
+  - a deal delivered: 0.15 × the share delivered (`dealGoodwill`) a
+    day, to both sides, so a kept deal settles at +15 each way;
+  - a deal that lapses undelivered: 5 grievance (`breakGrievance`) in
+    the buyer's view, once;
+  - a seller's refusal, deal or spot: 0.2 grievance a day
+    (`refusalGrievance`) in the refused nation's view, settling at 20;
+  - aid: 0.5 goodwill a day (`aidGoodwill`) in the receiver's view for
+    the whole famine gap covered, pro rata for part of it;
+  - people taken in: 5 goodwill (`migGoodwill`) in the sender's view
+    per percent of its people the receiver took, as they arrive;
+  - the threat assessment, against every linked nation that is weaker
+    (`weaker = 1 − their strength / ours`, strength being the military's
+    effect times population): a hawkish nation adds `0.1 × temper ×
+    weaker × richer` grievance a day (`threatRate`; `richer` is their
+    income per head over ours, less one, capped at 2), settling at −20
+    for China looking at Luxembourg; a peaceful one adds `0.05 × (1 −
+    temper) × weaker` goodwill a day (`peaceRate`), at most +5.
+
+**Lines.** At 20 and above (`friendLine`) a nation calls the other a
+friend: its deals with it form after 15 days of steady buying instead
+of 30. At −40 and below (`hostileLine`) it refuses to sell to it: deals
+go undelivered (and lapse after a month like any other) and the spot
+market skips it. At 15 and above (`lendLine`) it will lend to it.
+
+**Pacts.** When two nations each see the other at 40 or above
+(`pactLine`) for 90 days running (`pactDays`) they sign a pact; it
+lapses when either view falls below 10 (`pactBreak`) or either
+defaults on the other. A seller delivers its allies' deals first, then
+its other deals oldest first, so a short seller keeps its allies and
+its longest customers (the row order used to decide, which favoured
+the big rows). On seed 11 the first pacts come at day 180: Brazil with Peru, Colombia,
+Argentina and Bolivia; the United States with Mexico and Canada; India
+with Pakistan and Japan; Afghanistan with Iran and Uzbekistan; eleven
+by the end of the year.
+
+**Aid.** A nation not in famine sends food to linked nations in famine
+that it sees at 0 or above: a tenth a day (`aidShare`) of what it holds
+above its comfort line (the trade pillar's comfort, or nine tenths of
+its store's capacity when that is lower), split by need and capped by
+each need and each link's capacity. The food is a gift; the ledger
+lines are `aid.given` and `aid.received`. Over seed 11's first year
+5,800 units moved on 238 days.
+
+**Loans.** A nation whose treasury is below a month of its shortfall
+bill (the economy's `_bill` × `holdDays`: the famine and the unpaid
+upkeep priced at the world price) borrows the gap from the linked
+nation that sees it at the lend line or above and has the deepest
+treasury after a month of its own budget cap; the loan is capped by
+`debtCapPerUnit` (100) × its economy units less what it already owes,
+and the lender's spare. Interest is 0.05% a day (`interest`, about 20%
+a year). Each day 2% of each debt is due (`K.repayRate`); the economy
+holds it back before building, as it holds the import bill, and the
+relations pillar pays it to the lender. A debt unpaid for a year is a
+default: the balance is written off, the lender takes 40 grievance,
+any pact between them lapses, and the defaulter cannot borrow for a
+year. Singapore and the Maldives, broke and in famine on every seed
+until now, borrowed about 200 from Malaysia and Indonesia on seed 11
+and their famines ended within the first season; India borrowed 21,000
+from China over the year.
+
+**The day** (`dailyWorld`, one pass in the relations slot, after
+trade): fade and prune; deals kept and lapsed; refusals; arrivals;
+threats; aid; repayment, defaults and new loans; one pass over the
+linked pairs for pacts, the readouts and the two sets trade reads the
+next day (whom a nation refuses, whom it calls a friend).
+
+**The card** shows the temperament, the allies, the three warmest and
+three coldest views with the counts of friends and enemies, what it
+owes and to whom, and the day's aid and lending. The *Friends* layer
+colours a nation by its mean view of its partners; a nation's news
+covers aid sent, loans taken, pacts signed and lapsed, defaults.
+
+### What it touches
+
+Reads the economy's state and readouts (`_income`, `_famine`,
+`_bill`), the products' military effect, the trade pillar's deals,
+comfort line and the day's refusals and arrivals, and the links; writes
+its own fields, the food stores and treasuries (aid, loans, repayment),
+`_due` for the economy, `_refuses` and `_friendly` for trade, and the
+pacts trade orders deliveries by.
+
+### Defaults and levers
+
+Config rows, group "Relations":
+
+| Lever | Default | Meaning |
+|---|---|---|
+| `relFade` | 0.01 | share of goodwill and grievance lost a day |
+| `dealGoodwill`, `breakGrievance` | 0.15, 5 | a deal delivered in full, a day, both ways; a deal lapsed |
+| `refusalGrievance` | 0.2 | a day, while a seller refuses |
+| `aidShare`, `aidGoodwill` | 0.1, 0.5 | the share of food above comfort sent a day; goodwill a day for a famine gap covered |
+| `migGoodwill` | 5 | per percent of a people taken in |
+| `threatRate`, `peaceRate` | 0.1, 0.05 | a hawk's grievance, a dove's goodwill, a day per unit of the gaps |
+| `pactLine`, `pactBreak`, `pactDays` | 40, 10, 90 | the relation a pact needs both ways, where it lapses, the days it takes |
+| `hostileLine`, `friendLine`, `lendLine` | −40, 20, 15 | a seller refuses below; deals form sooner above; a nation lends above |
+| `interest`, `debtCapPerUnit` | 0.0005, 100 | a day; debt per unit of economy |
+
+Fixed in `K`: the baseline's parts (15, 10, +10 and −0.4 a point of
+distance), the repayment rate (2% of the debt a day), the default (365
+days unpaid, 40 grievance), the lender's reserve (30 days of its budget
+cap), the aid store line (90% of capacity), the stock ceiling (100) and
+the prune line (0.05).
+
+### Assumptions built in
+
+- Views are kept only for pairs with a history; the baseline needs no
+  storage, so a view of a stranger is its baseline.
+- Enmity stops trade only from the hostile side; the refused nation
+  may still sell to the refuser.
+- Aid is food only and free; a receiver's goodwill is the only return.
+- There is one lender per loan and one loan a day; a borrower takes
+  the deepest friendly treasury, not the cheapest.
+- Pacts carry no obligations beyond delivery order and the lender's
+  pool; defence waits for the war pillar.
+- A loan helps a nation short of money, not one short of trade
+  capacity: Japan on most seeds imports all its energy through a
+  capacity of two units a day per unit of economy, buys food first,
+  and its technology starves; a loan's repayment held before building
+  tips it sooner. The fix is the trade order and the capacity, phase 8.
 
 ## 6. War and the military
 

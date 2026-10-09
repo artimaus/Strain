@@ -437,10 +437,68 @@ neighbours who sell and need an income to buy with.
   by how much; whether the response bar returns and what it measures.
 - What the player can do on the map besides deploy.
 
-### 5.4 Relations and alliances (phase 5)
+### 5.4 Relations and alliances (phase 5): as decided, 8 October 2026
 
-- A relation per pair; what moves it (deals, aid, borders, war).
-- What an alliance is and what it shares (deals, response, defence).
+Built as `docs/nations.md` §5; this is the design it followed.
+
+**A view per direction.** Each nation holds an opinion of each linked
+nation it has dealt with, −100 to 100: a *baseline* from facts that do
+not move (the same region, a shared land border, like governments by
+the data rows' freedom and authority), plus *goodwill* and minus
+*grievance*, two stocks that accumulate from what the other nation did
+and fade by a share a day. France's view of Belgium is not Belgium's
+view of France.
+
+**What moves a view** (the answers to round 1): deals kept and broken;
+aid in a famine; refusals; people taken in; and a threat assessment,
+where an aggressive nation resents a weaker, richer neighbour and a
+peaceful one warms to a weaker one. Round 2 settled the measures:
+temperament from the row's authority and freedom until the regime
+carries it; strength as the military's effect times population;
+wealth as income per head.
+
+**Lines and pacts.** Deals with a friend form sooner and are delivered
+first; a seller below a hostile line refuses. Two nations above the
+pact line both ways for a season sign a pact; below a lower line it
+lapses.
+
+**Aid and lending** (round 2): food above comfort goes free to linked
+nations in famine that the giver sees at zero or above; any nation
+above a lending line lends, at interest, up to the borrower's debt cap;
+repayment comes before building; a year unpaid is a default that the
+lender remembers. Debt was deferred from phase 2 to here, so the
+nations with no reserves and no income (Singapore, the Maldives) could
+be rescued by their neighbours rather than by a rule.
+
+**The round after building.** The first numbers left the baseline
+alone: the stocks settled below 20, no pact formed in a year, no aid
+or loan moved. The baseline was raised for like neighbours (a border
++10, like governments +10) and the deal goodwill tripled and paid to
+both sides; the aid line was lowered to the store's own capacity,
+which for most nations sits below the trade comfort, so that the food
+a nation would otherwise waste is what it gives; a loan's repayment is
+held back by the economy before it builds. Then: eleven pacts in a
+year on seed 11 among neighbours that trade, aid on two days in three,
+and Singapore's and the Maldives' famines ended on a loan. The
+relations day costs about 3 ms once the baselines are cached per pair.
+Ordering deliveries by pact count, as first built, sank Japan, which
+had lived on being eleventh in the row order; deliveries now go allies
+first, then oldest first. Japan still fails on most seeds, with or
+without this pillar, for a reason that is the trade pillar's: its
+imports are capped by its economy's trade capacity, food is bought
+first, and the energy for its technology is what runs out; a loan's
+repayment, held before building, tips it sooner, so its technology
+halves over three years where it used to hold. Noted for phase 8.
+
+**Closing census** (six seeds, three years, 9 October 2026): famine
+nations 0 on every seed (2 before this phase); short nations 5 to 8;
+pacts 23 to 31; lending 2 to 122 money a day at the end, no default;
+aid 0 at the end because no nation was in famine; deals 230 to 289 and
+2,460 to 2,590 units traded a day, as before. Flagged on most seeds:
+Taiwan, Singapore, the Maldives, South Korea and Japan short on six,
+India on five. The Maldives and Singapore are fed but still short of
+energy and materials; India carries 2,000 to 3,600 of debt to its
+neighbours on five seeds and is debt-free and rich on the sixth.
 
 ### 5.5 War and the military (phase 6)
 

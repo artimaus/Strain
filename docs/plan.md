@@ -134,11 +134,19 @@ keeps its present meaning until then.
 
 **Goal.** Nations have friends and enemies for reasons on the card.
 
-**Scope.** `relations.js`; a relation per pair moved by deals, aid,
-borders and war; alliances and what they share; a relations layer;
-wire headlines.
+**Scope.** `relations.js`; a view per direction (a baseline plus
+fading goodwill and grievance) moved by deals, aid, refusals, people
+taken in and a threat assessment; pacts after a season; aid in a
+famine; loans at interest with default; trade reading the views; a
+relations layer; wire headlines; census lines; levers.
 
-**Q&A at the start.** `design.md` §5.4.
+**Q&A at the start.** `design.md` §5.4 (two rounds, 8 October 2026).
+
+**Done when.** On six seeds over three years pacts form among
+neighbours that trade and lapse for reasons on the wire; a hawkish
+nation's coldest views are its weaker, richer neighbours; the nations
+with no reserves live on loans and food aid instead of starving; every
+move of a view has a line.
 
 ## Phase 6: war and the military
 
@@ -182,6 +190,13 @@ a nation's card says in words what its government wants.
 recorded in `design.md` as a short entry (what moved, why, what the
 census showed before and after); the lever list trimmed to what was
 actually moved.
+
+**Known gaps carried here.** Technology stalls where the economy
+absorbs every worker (phase 1). A nation living on imports is capped
+by its trade capacity and buys food before the energy its technology
+needs; Japan fails this way on most seeds (phase 5's census). The
+military and health shares are stand-ins until regimes decide them
+(phase 3).
 
 ## Working rules for every phase
 

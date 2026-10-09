@@ -145,8 +145,12 @@ function dailyWorld(rng, LW) {
     bought[buyer][r] += q; sold[seller][r] += q; paid[buyer][r] += money; earned[seller][r] += money;
     return q;
   }
-  // 2. deals first: the seller's offer goes to its partners at the price they signed
+  // 2. deals first: a seller's offer goes to its deal partners at the price they signed, its allies' deals before
+  //    the rest and its oldest deals before its newer ones, so a short seller keeps its longest customers
   const sellsTo = Object.create(null);                            // seller -> [{ buyer, deal }] for the card
+  // the relations pillar (js/relations.js, runs after trade) leaves on each state whom it refuses and whom it calls a friend
+  const R = window.RELATIONS, refuses = (a, b) => !!(S[a]._refuses && S[a]._refuses.has(b)), friendly = (a, b) => !!(S[a]._friendly && S[a]._friendly.has(b)), ally = (a, b) => R ? R.isAlly(a, b) : false;
+  const live = [];                                                // { iso, d }: the deals to deliver today
   for (const iso of isos) {
     const s = S[iso]; if (!s.deals || !s.deals.length) continue;
     const keep = [];
@@ -154,15 +158,30 @@ function dailyWorld(rng, LW) {
       const r = d.r;
       if (!S[d.from] || !isos.includes(d.from)) continue;
       if (day >= d.until) { W.log({ sev: "small", kind: "trade", iso, iso2: d.from, text: W.nameOf(iso) + ": the " + RES[r] + " deal with " + W.nameOf(d.from) + " runs out" }); continue; }
-      const got = transfer(d.from, iso, r, d.q, d.price);
-      if (got < d.q * 0.9) d.short++; else d.short = 0;
-      add(iso, "deal.in." + RES[r], RES[r] + " under deal", got, "units", "from " + W.nameOf(d.from));
-      add(d.from, "deal.out." + RES[r], RES[r] + " delivered on deal", got, "units", "to " + W.nameOf(iso));
-      if (d.short >= c.dealLapseDays) { W.log({ sev: "small", kind: "trade", iso, iso2: d.from, text: W.nameOf(iso) + ": the " + RES[r] + " deal with " + W.nameOf(d.from) + " lapses, undelivered for a month" }); continue; }
-      keep.push(d);
-      (sellsTo[d.from] || (sellsTo[d.from] = [])).push({ buyer: iso, deal: d });
+      if (refuses(d.from, iso)) {                                 // enmity: the seller will not deliver
+        d.short++; d.deliveredToday = 0; (s._refusedBy || (s._refusedBy = [])).push(d.from);
+        if (d.short >= c.dealLapseDays) { (s._lapsed || (s._lapsed = [])).push({ from: d.from, r }); continue; }
+        keep.push(d); continue;
+      }
+      d.deliveredToday = 0; keep.push(d); live.push({ iso, d });
     }
     s.deals = keep;
+  }
+  for (const allies of [true, false]) {
+    const batch = live.filter(x => ally(x.iso, x.d.from) === allies).sort((x, y) => x.d.until - y.d.until);   // oldest first (a fixed term)
+    for (const x of batch) {
+      const { iso, d } = x, r = d.r, s = S[iso];
+      const got = transfer(d.from, iso, r, d.q, d.price);
+      d.deliveredToday = d.q > 0 ? got / d.q : 1;
+      if (got < d.q * 0.9) d.short++; else d.short = 0;
+      add(iso, "deal.in." + RES[r], RES[r] + " under deal", got, "units", "from " + W.nameOf(d.from) + (got < d.q * 0.9 ? ", the seller short" : ""));
+      add(d.from, "deal.out." + RES[r], RES[r] + " delivered on deal", got, "units", "to " + W.nameOf(iso));
+      if (d.short >= c.dealLapseDays) { d.lapse = true; (s._lapsed || (s._lapsed = [])).push({ from: d.from, r }); W.log({ sev: "small", kind: "trade", iso, iso2: d.from, text: W.nameOf(iso) + ": the " + RES[r] + " deal with " + W.nameOf(d.from) + " lapses, undelivered for a month" }); continue; }
+      (sellsTo[d.from] || (sellsTo[d.from] = [])).push({ buyer: iso, deal: d });
+    }
+  }
+  for (const iso of isos) {
+    const s = S[iso]; if (s.deals && s.deals.length) s.deals = s.deals.filter(d => !d.lapse);
     ask[iso] = ask[iso].map((v, r) => Math.max(0, v - bought[iso][r]));
   }
   // 3. the spot market: seller by seller, pro rata by ask among its linked buyers
@@ -171,9 +190,11 @@ function dailyWorld(rng, LW) {
     for (const seller of isos) {
       if (!(offer[seller][r] > 1e-9)) continue;
       const partners = L.partners(seller).filter(b => S[b] && ask[b] && ask[b][r] > 1e-9);
-      if (!partners.length) continue;
-      const sumAsk = partners.reduce((t, b) => t + ask[b][r], 0), share = offer[seller][r];
-      for (const b of partners) {
+      const hostile = S[seller]._refuses, served = hostile && hostile.size ? partners.filter(b => !hostile.has(b)) : partners;   // enmity: no sale
+      if (served.length < partners.length) for (const b of partners) if (hostile.has(b)) (S[b]._refusedBy || (S[b]._refusedBy = [])).push(seller);
+      if (!served.length) continue;
+      const sumAsk = served.reduce((t, b) => t + ask[b][r], 0), share = offer[seller][r];
+      for (const b of served) {
         const want = Math.min(ask[b][r], share * ask[b][r] / sumAsk);
         const got = transfer(seller, b, r, want, price);
         if (got > 0) {
@@ -192,7 +213,8 @@ function dailyWorld(rng, LW) {
       if (!bf[bk]) { delete by[bk]; continue; }                   // the run of days is broken
       const [days, sum] = by[bk], [seller, rs] = bk.split("|"), r = +rs;
       const least = Math.max(c.dealMinUnits, K.dealMinShare * (need[iso] ? need[iso][r] : 0));   // a deal is for a real share of what the nation uses
-      if (days >= c.dealAfterDays && sum / days >= least && !s.deals.some(d => d.from === seller && d.r === r)) {
+      const after = c.dealAfterDays * (friendly(iso, seller) ? 0.5 : 1);   // friends sign sooner
+      if (days >= after && sum / days >= least && !s.deals.some(d => d.from === seller && d.r === r)) {
         const q = sum / days;
         s.deals.push({ from: seller, r, q, price: P[r], until: day + c.dealTerm, short: 0 });
         delete by[bk];
@@ -257,6 +279,7 @@ function dailyWorld(rng, LW) {
       const q = Math.min(leaving * roomOf[x.to] / sumRoom, c.migPerCap * x.e.cap, roomOf[x.to]);
       if (!(q > 1e-9)) continue;
       S[x.to].pop += q; roomOf[x.to] -= q; placed += q;
+      (S[x.to]._arrivedFrom || (S[x.to]._arrivedFrom = {}))[iso] = (S[x.to]._arrivedFrom[iso] || 0) + q;
       add(x.to, "arrived", "arrived", q, "M", "from " + W.nameOf(iso));
     }
     const stayed = leaving - placed;
