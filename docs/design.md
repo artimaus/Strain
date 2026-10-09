@@ -569,6 +569,17 @@ about 15 points a year at level 0, 3 at 50, half a point at 100; the
 rich hold where they start and the poor climb. Technology's unpowered
 decay became proportional to the unpaid share.
 
+**Census after the round** (six seeds, three years, 7 October 2026):
+people 8,255 to 8,261 M; famine in 2 nations (Singapore, the Maldives);
+short 5 to 7 (Taiwan, South Korea, India and Bangladesh in most
+seeds); income 54,500 to 57,000; mean technology 57 to 61 (Japan
+holds at 96; India, unpowered, falls to 32); mean military 52 to 56,
+holding near its seeds (the United States 89, Russia 82, China 45);
+mean health 32 to 33, the rich holding (the United States 80, Brazil
+and Mexico 54) and the short nations decaying (China 20, Pakistan 18,
+India 5); prices in surplus; 2,500 to 2,650 units traded; 244 to 279
+deals. Accepted as phase 3; the numbers get their pass in balance.
+
 **Census before the round** (six seeds, three years, 7 October 2026): people 8,268 to
 8,273 M; famine in 2 nations (Singapore, the Maldives); short 8 to 12
 (Taiwan, South Korea, Saudi Arabia, Algeria, India, the Emirates: the
