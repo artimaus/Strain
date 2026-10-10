@@ -93,7 +93,7 @@ def main():
     days = a.days or int(round(a.years * 365))
     if a.quick:
         seeds, days = seeds[:1], min(days, 365)
-    hold = a.hold or max(60000, 60000 + days * 150)
+    hold = a.hold or max(60000, 60000 + days * 300)   # a day costs 100 to 250 ms on a busy machine
     timeout = a.timeout or max(120, hold // 1000 + 60)
 
     results = []

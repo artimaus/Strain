@@ -147,7 +147,7 @@ function daily(iso, rng, L) {
   const buildM = s.shares.infra * Math.min(cap, Math.max(s.treasury, 0)) / K.infraCostMoney * K.infraCostMaterials;
   const slots = { I: c.infraSlots * s.infra, E: c.econSlots * s.econ, A: c.acadSlots * s.acad };
   // 3. labour, needs first: the base food need, energy, materials, then the food margin; the idle feed themselves a little
-  let idle = Math.max(0, s.pop - slots.I - slots.E - slots.A), w = null, wI = 0, wE = 0, wA = 0, wX = 0;
+  let idle = Math.max(0, s.pop - slots.I - slots.E - slots.A), w = null, wI = 0, wE = 0, wA = 0, wX = 0, wS = 0;
   for (let pass = 0; pass < 3; pass++) {
     const foodT = Math.max(0, N.food - K.subsistence * idle), foodAll = Math.max(0, N.food * (1 + K.foodMargin) - K.subsistence * idle);
     const mT = N.upkM + buildM;
@@ -159,11 +159,13 @@ function daily(iso, rng, L) {
     wI = Math.min(slots.I, w.food + w.energy + w.materials + w.margin, s.pop);
     let rest = s.pop - wI;
     wX = Math.min(s.exportWorkers || 0, Math.max(0, slots.I - wI), rest); rest -= wX;   // the workers trade moved to export keep their slots
+    wS = Math.min(s.soldiers || 0, rest); rest -= wS;                                    // the army (js/war.js sized it yesterday) before the economy
     wE = Math.min(slots.E, rest); rest -= wE;
     wA = Math.min(slots.A, rest); rest -= wA;
     idle = rest;
   }
-  add("workInfra", "in infrastructure", wI, "M"); add("workExport", "capturing for export", wX, "M"); add("workEcon", "in the economy", wE, "M"); add("workAcad", "in academia", wA, "M"); add("idle", "idle", idle, "M");
+  add("workInfra", "in infrastructure", wI, "M"); add("workExport", "capturing for export", wX, "M"); if (wS) add("workArmy", "in the army", wS, "M");
+  add("workEcon", "in the economy", wE, "M"); add("workAcad", "in academia", wA, "M"); add("idle", "idle", idle, "M");
   // 4. capture: the workers go to the base food need, then energy, then materials, then the margin
   let avail = wI; const take = {};
   for (const key of ["food", "energy", "materials", "margin"]) { take[key] = Math.min(w[key], avail); avail -= take[key]; }
@@ -211,10 +213,10 @@ function daily(iso, rng, L) {
   //    shortfall would cost at the world price, so the money is there for the market, and builds with the rest
   const prices = W.WORLD_STATE.prices || [1, 1, 1];
   const bill = famine * N.food * prices[0] + Math.max(0, N.upkE + N.techE - techPaid - econE) * prices[1] + Math.max(0, N.upkM - econM) * prices[2];
-  const due = s._due || 0;                                        // a loan's repayment (js/relations.js) comes before building
+  const due = (s._due || 0) + (s._tributeDue || 0);               // a loan's repayment (js/relations.js) and a tribute (js/war.js) come before building
   const held = Math.min(s.treasury, bill * K.holdDays + due), wentShort = famine > 0.02 || paid < K.shortLine;
   const spend = Math.max(0, Math.min(s.treasury - held, cap)), sh = s.shares;
-  if (held > 0) add("held", "kept for the market", held, "money", (bill > 0 ? (famine > 0.02 ? "famine" : "upkeep unpaid") + ": a month of the bill" : "") + (due > 0 ? (bill > 0 ? " and " : "") + "a loan's repayment" : ""));
+  if (held > 0) add("held", "kept for the market", held, "money", (bill > 0 ? (famine > 0.02 ? "famine" : "upkeep unpaid") + ": a month of the bill" : "") + (due > 0 ? (bill > 0 ? " and " : "") + (s._tributeDue > 0 ? "a tribute" : "a loan's repayment") : ""));
   // a nation short of its upkeep builds no units it cannot power: only exploration goes on
   const build = wentShort ? 0 : spend;
   // upkeep before building: the materials the end products need today stay in the store for them (js/products.js runs next)
@@ -224,7 +226,10 @@ function daily(iso, rng, L) {
   const unitsE = build * sh.econ / K.econCostMoney;
   const research = Math.min(spend * sh.research, wA * K.researchCost);   // research is not a unit to power: it goes on when short
   // the end products' money is set aside here and spent by the products pillar, which runs next
-  s._budget_mil = build * (sh.military || 0); s._budget_hea = build * (sh.health || 0);
+  const payS = window.WAR ? (c.soldierPay || 0) : 0;              // the share of the military's money that is wages (js/war.js)
+  s._wageBudget = spend * (sh.military || 0) * payS;
+  s._budget_mil = build * (sh.military || 0) * (1 - payS); s._budget_hea = build * (sh.health || 0);
+  if (s._wageBudget) add("spend.soldiers", "set aside for soldiers", s._wageBudget, "money");
   add("spend.military", "set aside for the military", s._budget_mil, "money"); add("spend.health", "set aside for health", s._budget_hea, "money");
   const funded = wA > 0 ? research / (wA * K.researchCost) : 0;
   const dT = c.researchRate * (wA / Math.max(s.pop, 1e-6)) * funded / (1 + s.tech / c.techSlow);
@@ -232,7 +237,7 @@ function daily(iso, rng, L) {
   let explore = spend * sh.explore;
   if (strain[worst] > 1) { s.ceil[worst] += explore * K.exploreYield; add("explored." + RES[worst], RES[worst] + " ceiling raised", explore * K.exploreYield, "units/day"); }
   else explore = 0;
-  const spent = unitsI * K.infraCostMoney + unitsE * K.econCostMoney + research + explore + s._budget_mil + s._budget_hea;
+  const spent = unitsI * K.infraCostMoney + unitsE * K.econCostMoney + research + explore + s._budget_mil + s._budget_hea + s._wageBudget;
   s.treasury -= spent;
   s.infra += unitsI; s.econ += unitsE; s.tech += dT;
   add("spent", "spent", spent, "money"); add("cap", "spending cap", cap, "money/day");
@@ -255,7 +260,8 @@ function daily(iso, rng, L) {
   // the budget rule: one step a day from the largest other share to the one the first firing rule names
   const short = Math.max(famine, 1 - paid);
   let rule, reason;
-  if (short > 0.02) {
+  if (s.atWar && (c.warShare || 0) > (sh.military || 0)) { rule = "military"; reason = "at war"; }
+  else if (short > 0.02) {
     const what = famine > 0.02 ? 0 : worst;
     if (strain[what] > 1.5) { rule = "explore"; reason = RES[what] + " past its ceiling"; }
     else { rule = "infra"; reason = "short of " + RES[what]; }

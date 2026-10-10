@@ -72,6 +72,7 @@ scrollbars at nine window sizes. It takes about half a minute.
 | `js/products.js` | The products pillar: military and health as levels with embodied technology and population, built and decaying by named lines. |
 | `js/trade.js` | The trade pillar: export capture, asks and offers, deals, the world prices, migration along the links. |
 | `js/relations.js` | The relations pillar: directed views with a baseline and fading goodwill and grievance, pacts, aid, loans. |
+| `js/war.js` | The war pillar: the army as a job, wars over shortages and enmities, attrition, the weekly peace table, tributes. |
 | `js/shell.js` | The player, titles, variants, the view switch, the config panel, `window.ENTITY`. |
 | `js/worldui.js` | The country card, the region dialog, the deploy dialog. |
 | `js/wire.js` | The calendar readout and the news panel on the map. |

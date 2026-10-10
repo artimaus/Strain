@@ -362,13 +362,13 @@ POST = """<script>
       var health = { name: "health", label: "Test health", fields: [["tz", "tz", 0]],
         daily: function (iso, rng, L) { if (iso === "FR") { ran.push("health"); draws.push(rng()); L.add("health", "health.x", "x", W.day, "u"); } },
         rows: function (iso, L) { return [["x", L.get("health.x")]]; } };
-      var rel = { name: "war", label: "Test war",
-        daily: function (iso, rng, L) { if (iso === "FR") ran.push("war"); } };
+      var rel = { name: "weather", label: "Test weather",
+        daily: function (iso, rng, L) { if (iso === "FR") ran.push("weather"); } };
       W.registerPillar(rel); W.registerPillar(health);
       var fr = W.ensureCountry("FR");
       r.modals.pillarFields = fr.tz === 0 && W.COUNTRY_FIELDS.some(function (f) { return f[0] === "tz"; });
       W.newWorld(4242); W.advanceDays(3);
-      r.modals.pillarOrder = ran.join(",") === "health,war,health,war,health,war";
+      r.modals.pillarOrder = ran.join(",") === "weather,health,weather,health,weather,health";
       var L = W.ledgerOf("FR");
       r.modals.ledgerToday = L.day === W.day && L.get("health.x") === W.day && L.of("health").length === 1 && W.ledgerOf("DE").get("health.x") === 0;
       var d1 = draws.slice(); ran = []; draws = [];
@@ -382,7 +382,7 @@ POST = """<script>
       // the card: a section per pillar that offers rows, its open state remembered
       window.ENTITY.openCountryModal("FR");
       var det = $("cmBody").querySelector('details.pillar[data-pillar="health"]');
-      r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="war"]');
+      r.modals.cardSections = !!det && det.querySelector(".row") !== null && !$("cmBody").querySelector('details.pillar[data-pillar="weather"]');
       esc();
       // the save: a pillar field rides in the pack table, version 9
       fr = W.ensureCountry("FR"); fr.tz = 5;
@@ -397,7 +397,7 @@ POST = """<script>
         setTimeout(function () {
           r.modals.pillarFieldLoads = fr0 === 0 && W.ensureCountry("FR").tz === 5;
           localStorage.removeItem("entity_save_v3");
-          W.unregisterPillar("health"); W.unregisterPillar("war");
+          W.unregisterPillar("health"); W.unregisterPillar("weather");
           W.newWorld();
           done();
         }, 150);
@@ -536,6 +536,43 @@ POST = """<script>
       done();
     } catch (e) { r.modals.relationsViews = false; r.modals.relationsError = String(e); done(); }
   }
+  // Phase 6: the war pillar (docs/nations.md §6): the army, a declared war
+  // that is fought and ends at the peace table, wars of the world's own.
+  function war(done) {
+    at("war");
+    try {
+      var W = window.WORLD, WAR = window.WAR;
+      r.modals.warRegistered = !!WAR && W.pillarList().some(function (p) { return p.name === "war"; });
+      var news = 0, onNews = function (e) { if (e.detail.kind === "war") news++; };
+      addEventListener("entity:news", onNews);
+      W.newWorld(9001); W.advanceDays(60);
+      var fr = W.COUNTRY_STATE.FR, be = W.COUNTRY_STATE.BE;
+      r.modals.warArmy = fr.soldiers > 0 && fr.soldiers <= 0.02 * fr.pop + 1e-9 && W.ledgerOf("FR").get("war.wages") > 0 && W.ledgerOf("FR").get("economy.workArmy") > 0;
+      var w = WAR.declare("FR", "BE", 0, "the smoke test");
+      r.modals.warDeclared = !!w && fr.atWar && be.atWar && W.WORLD_STATE.wars.length === 1 && !fr.deals.some(function (d) { return d.from === "BE"; });
+      W.advanceDays(3);
+      r.modals.warFought = W.ledgerOf("FR").get("war.lost") > 0 && W.ledgerOf("BE").get("war.killed") > 0 && fr._refuses.has("BE") && be.weary > 0 && typeof w.pos === "number";
+      var ended = false; for (var i = 0; i < 400 && !ended; i++) { W.advanceDays(1); ended = W.WORLD_STATE.wars.indexOf(w) < 0; }   // other wars may start meanwhile
+      r.modals.warEnds = ended && !WAR.enemiesOf("FR").has("BE") && W.WORLD_STATE.peaces >= 1;
+      r.modals.warTerms = W.WORLD_STATE.tributes.some(function (t) { return t.from === "BE" && t.to === "FR" && t.r === 0 && t.share > 0; });
+      removeEventListener("entity:news", onNews);
+      r.modals.warWire = news >= 2;
+      W.newWorld(9001); W.advanceDays(150);                       // the first season is a warm-up; the hawks move on day 90
+      r.modals.warNatural = W.WORLD_STATE.warsStarted > 0 && W.WORLD_STATE.log.some(function (e) { return e.kind === "war" && /attacks/.test(e.text); });
+      r.modals.warCensus = typeof W.censusOf("FR").soldiers === "number" && typeof W.censusWorld().warsStarted === "number";
+      r.modals.warLayer = !!document.querySelector('#mapLegend .layers button[data-layer="war"]');
+      window.ENTITY.openCountryModal("FR");
+      var det = $("cmBody").querySelector('details.pillar[data-pillar="war"]');
+      r.modals.warCard = !!det && det.querySelectorAll(".row").length >= 1;
+      esc();
+      $("saveBtn").click();
+      var saved = JSON.parse(localStorage.getItem("entity_save_v3") || "null");
+      r.modals.warSave = !!saved && typeof saved.countries.FR.sol === "number" && Array.isArray(saved.world.wrs) && Array.isArray(saved.world.trb);
+      localStorage.removeItem("entity_save_v3");
+      W.newWorld();
+      done();
+    } catch (e) { r.modals.warRegistered = false; r.modals.warError = String(e); done(); }
+  }
   // --eval: wait for the map (links need it), run the caller's code with the
   // result object as `r`, and store what it returns (a promise is awaited).
   function evalRun() {
@@ -560,7 +597,7 @@ POST = """<script>
     if (MODE === "layout") { layout(); finish(); return; }
     if (MODE === "eval") { boot(); evalRun(); return; }
     boot(); layout();
-    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { products(function () { relations(function () { saveLoad(finish); }); }); }); }); }); }); }); });
+    sim(function () { modals(); text(); clock(function () { links(function () { foundations(function () { economy(function () { trade(function () { products(function () { relations(function () { war(function () { saveLoad(finish); }); }); }); }); }); }); }); }); });
   });
 })();
 </script>
@@ -807,9 +844,9 @@ def main():
                     help="comma list of checks to run: boot, sim, modals, text, layout "
                          "(the link-graph and save/load flags are part of modals)")
     ap.add_argument("--browser", default=None, help="path to chrome/msedge")
-    ap.add_argument("--hold", type=int, default=150000,
+    ap.add_argument("--hold", type=int, default=240000,
                     help="real ms the functional run may take before it is abandoned")
-    ap.add_argument("--timeout", type=int, default=210, help="seconds per browser run")
+    ap.add_argument("--timeout", type=int, default=300, help="seconds per browser run")
     ap.add_argument("--jobs", type=int, default=2, help="parallel layout runs (more = slower starts)")
     ap.add_argument("--keep", action="store_true", help="keep the generated probe pages")
     ap.add_argument("--offline", action="store_true",

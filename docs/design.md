@@ -500,14 +500,68 @@ India on five. The Maldives and Singapore are fed but still short of
 energy and materials; India carries 2,000 to 3,600 of debt to its
 neighbours on five seeds and is debt-free and rich on the sixth.
 
-### 5.5 War and the military (phase 6)
+### 5.5 War and the military (phase 6): as decided, 9 October 2026
 
-- What the military is made of (a fourth employer was proposed and
-  deferred).
-- What starts a war (a binding shortage next to a neighbour's
-  surplus was the stated intent), what it costs, how it ends, what
-  changes hands.
-- How wars and crises emerge at the global scale from local ones.
+Built as `docs/nations.md` §6; this is the design it followed, in
+three rounds.
+
+**Round 1.** The military is a standing fourth employer: soldiers
+staffed always, at a share the military budget sets, paid a wage;
+strength is the level's effect times the soldiers. A war starts on a
+shortage next to a surplus or on enmity. Each day of war brings
+military attrition, deaths and flight, a closed border and
+infrastructure damage, all four. The ending was sent back for a deeper
+look: either side should be able to sue for peace or demand surrender
+with an attached deal, advantaged or disadvantaged as it sees its
+position, and a nation needs a measure of what it will accept.
+
+**Round 2.** Soldiers come out of the labour pool before the economy.
+The army is what half the military share pays for, capped at 2% of
+the people in peace and 5% at war, and the share climbs toward 0.3 at
+war. The peace table as built: a position from side strengths, a
+weariness from time, level lost and people lost, a weekly demand that
+falls with the stronger side's weariness and an offer that rises with
+the weaker's, peace at the midpoint when they meet, surrender at the
+ceiling, a white peace when both are weary. A defender's allies join;
+an attacker's hawkish allies join.
+
+**Round 3**, after the first build found no natural war in two years
+on any slack: the short were unarmed (a broke nation had no wage
+budget and so no army) and land neighbours were friends by the
+relations baseline (median view 31 across a border). Decided: every
+nation keeps 0.5% of its people as unpaid conscripts; wars start by
+need, greed or enmity, with the view and strength lines by
+temperament; a hawk may fight on two fronts if it outweighs both
+enemies three to one.
+
+**The round after building.** Ten greed wars in the first season on
+seed 11 and 32 in two years, all ending at the table within 35 to 49
+days, mostly at a third to a half of the loser's money. Three fixes
+followed the first run: a tribute already being paid bars a second
+war against the payer, a tribute is one per pair, and the first
+season is a warm-up with no wars. Flight was cut from 0.5% to 0.05% a
+day at parity after Israel lost three quarters of its people to
+repeated wars. Broke losers (Lebanon, Zambia) broke their money
+tributes every two months because the economy had spent the day's
+income before the tribute was taken; the economy now holds the
+tribute before it builds, and a tribute counts as missed only when
+the payer had the means. The war step costs nothing measurable once
+land neighbours are cached per nation.
+
+**Closing census** (six seeds, three years, 9 October 2026): 42 to 49
+wars started and 41 to 48 peaces made per seed, one war under way at
+the end on every seed (Russia on Latvia), 15 to 18 tributes being
+paid, 178 to 186 M soldiers. Famine nations 0 to 1, short nations 5
+to 8, pacts 26 to 29, no default. The military mean fell from about 54
+to 50: wages take half the military money and attrition takes level.
+Paying tribute on every seed: Guyana, Israel, Latvia, Lebanon,
+Lithuania, Namibia, Norway, Zambia. Every war in the three years was
+a greed war; no nation was short for a month next to a surplus it
+could take, and no view fell to the enmity line. The need and enmity
+triggers wait for a scarcer, colder world (the outbreak pass, phase
+8). The smoke's functional run now takes about 230 s on this machine
+and its default hold and timeout were raised to 240 and 300 s; the
+census budget is 300 ms a day.
 
 ### 5.7 End products: technology, military, health (phase 3): as decided, 6 October 2026
 

@@ -700,7 +700,149 @@ the prune line (0.05).
 
 ## 6. War and the military
 
-Not built. Phase 6; its questions are `design.md` §5.5.
+Owner: `js/war.js`, with the army's place in the labour step, the
+wage set-aside, the war-time budget rule and the tribute hold in
+`js/economy.js`, and the strength measure and grievances in
+`js/relations.js`. Design: `design.md` §5.5. Built in phase 6,
+October 2026.
+
+### What it does
+
+**State** (rows added to the country pack table): `soldiers` (M),
+`weary` (0 to 1), `lastWar` (the day it last started one), `shortDays`
+(days short of each resource, running). On the world: `wars` (the
+wars under way), `tributes` (the tributes being paid), `warsStarted`
+and `peaces` (counts). The products pillar's `atWar` flag is set here.
+
+**The army** is a job. Half the military budget share (`soldierPay`)
+is set aside by the economy as wages; the war pillar hires as many
+soldiers as that pays at the economy's wage, up to 2% of the people in
+peace and 5% at war (`armyCap`, `warArmyCap`), and returns the rest.
+Whatever the budget, at least 0.5% of the people serve as unpaid
+conscripts (`armyMin`). Soldiers come out of the labour pool after the
+needs and the export reserve and before the economy, so a fully
+employed nation loses workers to its army. France on seed 11, day 60:
+1.37 M soldiers at the cap, 26 money a day in wages. At war the
+economy's budget rule moves the military share up first, toward 0.3
+(`warShare`). *Strength* is the military level's effect times the
+soldiers in millions: France 1.8, the United States 12.8, China 50.8;
+the relations pillar reads it for its threat assessment.
+
+**What starts a war.** From day 90 on, a nation not fighting on two
+fronts, with a season since its last declaration, looks at its land
+neighbours that are not its allies, not at war and not paying it
+tribute, and attacks the one it most outweighs that qualifies:
+
+- *Need*: it has been short of a resource for 30 days (`shortDays`:
+  famine for food, the economy unpaid with that resource the one asked
+  for and not found), the neighbour has a surplus of it (capture 1.1
+  times its use, or a store above comfort), and the view and strength
+  lines by temperament hold: a hawk needs a view below 20 and 1.5 to 1,
+  the wary below 0 and 2 to 1, a dove below −20 and 3 to 1.
+- *Greed*: a hawk attacks a neighbour that is richer per head and that
+  it outweighs 3 to 1 (`greedMargin`), seen below 20, for money.
+- *Enmity*: a neighbour seen at −40 or below (the relations hostile
+  line) that it outweighs 2 to 1 (`enmityMargin`), for money.
+
+A hawk already at war may open a second front only if it outweighs
+both enemies together 3 to 1. The defender's allies join its side; the
+attacker's allies join if they are hawks. Enemies' deals and pacts are
+cut, and the attacked nation takes 60 grievance toward the attacker.
+On seed 11 the first season ends with ten wars: Russia on Estonia,
+China on Mongolia, Egypt on Israel, Iran on Azerbaijan, Turkey on
+Greece, Belarus on Latvia, Syria on Lebanon, Venezuela on Guyana,
+Angola on Namibia, Zimbabwe on Botswana; all greed.
+
+**A day of war.** For each side, the enemy's strength over its own
+(capped at 5) is the ratio. Every member loses `attrition` (0.3%) of
+its military level times the ratio, and `casualty` (0.1%) of its
+soldiers times the ratio, who die. The weaker side also loses
+`damage` (0.05%) of its infrastructure times the ratio, and `flight`
+(0.05%) of its people times the ratio flee along its other links to
+nations with room, at up to ten times the migration rate per link.
+Enemies refuse each other on the market. The level's war-time energy
+and food upkeep (phase 3) run. Weariness rises by 1/365 a day, half
+the share of the level lost since the war began, and twice the share
+of the people lost, to a ceiling of 1; in peace it fades 1% a day.
+
+**The peace table.** Every 7 days (`termsDays`) the two principals
+table terms. Position is (ours − theirs) / (ours + theirs) in side
+strength. The stronger *demands* `position × maxTribute × (1 −
+weariness)`; the weaker *offers* `position × maxTribute × (0.5 +
+weariness)`, the ceiling being half (`maxTribute`). They sign the
+week the offer meets the demand, at the midpoint, never before day 30
+(`minWarDays`). A side at position −0.6 or worse with weariness 0.5
+or more surrenders at the ceiling. At a position within 0.1 of parity
+a white peace comes once both are weary past 0.5. Russia and Estonia
+on seed 11: declared day 90, position 0.9 at once, peace on day 139
+with Estonia paying half of its money for a year. The loser takes 40
+grievance toward the winner and the loser's dove neighbours 20.
+
+**Tributes.** A share of the loser's daily capture of the contested
+resource, or of its income, for a year, one per pair at a time. Money
+tributes are held by the economy before it builds, like a loan's
+repayment, so a payer with an income pays; a resource tribute comes
+from the store. A tribute counts as missed only when the payer has the
+means (not in famine, its upkeep paid) and pays under half; a month
+missed breaks it: 40 grievance in the winner's view and the winner may
+attack again at once. Lebanon and Zambia, broke, broke theirs every
+two months before the hold was added.
+
+**The card** shows the army, each war with its position and
+weariness, the terms on the table, the day's losses, the tributes paid
+and received, how long the nation has been short of what, and a fading
+weariness. The *War* layer colours nations at war, then those paying
+or receiving tribute; the wire carries declarations, allies joining,
+peaces, surrenders, tributes broken and ended.
+
+### What it touches
+
+Reads the economy's wage, needs, readouts and ledger (famine, paid,
+income, captured, housing), the trade pillar's unmet asks, comfort and
+migration rate, the products' military effect, relations' views, pacts,
+temperament and hostile line, and the land links; writes `soldiers`,
+`atWar`, the level, population, infrastructure, stores and treasuries
+of the belligerents, `_refuses` for trade, `_tributeDue` for the
+economy, `_arrivedFrom` for relations, and grievances through
+`RELATIONS.addGrievance`.
+
+### Defaults and levers
+
+Config rows, group "War" (seventeen, two over the target: the greed
+margin and the conscript floor came from the third round):
+
+| Lever | Default | Meaning |
+|---|---|---|
+| `soldierPay` | 0.5 | the military share's part set aside as wages |
+| `armyMin`, `armyCap`, `warArmyCap` | 0.005, 0.02, 0.05 | conscripts whatever the budget; the army's cap in peace and at war, shares of the people |
+| `warShare` | 0.3 | the military budget share a nation at war climbs toward |
+| `shortDays` | 30 | days short of a resource before a war of need |
+| `attackMargin`, `doveMargin`, `enmityMargin`, `greedMargin` | 1.5, 3, 2, 3 | the strength a hawk, a dove, an enmity war, a greed war needs |
+| `attrition`, `casualty` | 0.003, 0.001 | level lost and soldiers killed a day at parity |
+| `damage`, `flight` | 0.0005, 0.0005 | the weaker side's infrastructure lost and people fleeing a day at parity |
+| `maxTribute` | 0.5 | the tribute's ceiling, a share of capture or income |
+| `termsDays`, `minWarDays` | 7, 30 | how often terms are tabled; no peace before this |
+
+Fixed in `K`: the temperament lines (hawk 0.6, dove 0.35) and each
+temperament's view line (20, 0, −20) and the wary margin (2); one
+start a season (90 days); the weariness rates (1/365, 0.5, 2) and its
+fade (1%); surrender (position −0.6, weariness 0.5) and the white
+peace (position within 0.1, weariness 0.5); the tribute's term (365)
+and the month that breaks it; the surplus margin (1.1); the grievances
+(attacked 60, lost 40, a neighbour 20, broken 40); the ratio cap (5)
+and the flight cap (ten times the migration rate).
+
+### Assumptions built in
+
+- Wars are fought across land borders only; a navy waits.
+- Soldiers do not capture or produce; conscripts are unpaid and the
+  wage is the economy's.
+- Nothing is annexed: territory, reserves and people stay where they
+  are; a war's gains are a tribute for a year.
+- The triggers are stand-ins by temperament until regimes decide
+  (phase 7), as the budget shares are; a hawk at 1.0 is relentless and
+  rotates through its weaker neighbours.
+- Allies defend; nobody attacks for an ally.
 
 ## 7. Regimes and their goals
 

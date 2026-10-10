@@ -153,12 +153,20 @@ move of a view has a line.
 **Goal.** Shortages next to surpluses start wars; wars end; the world
 has crises of its own.
 
-**Scope.** `war.js`; the military (the deferred question of what it is
-made of); what starts a war, what it costs, how it ends, what changes
-hands; how local wars become global crises without being scripted; a
-conflict layer; wire headlines.
+**Scope.** `war.js`; the army as a job (conscripts, wages from the
+military share, before the economy in the labour order); wars of
+need, greed and enmity across land borders; attrition, deaths, flight,
+closed borders, damage; the weekly peace table (position, weariness,
+demand and offer, surrender, white peace); tributes and their
+breaking; allies joining; a war layer; wire headlines; census lines;
+levers.
 
-**Q&A at the start.** `design.md` §5.5.
+**Q&A at the start.** `design.md` §5.5 (three rounds, 9 October 2026).
+
+**Done when.** On six seeds over three years wars start for reasons on
+the wire and end at the table; a hawk's victims pay and recover; a
+defender's allies join; no nation is fought to nothing; every loss has
+a line.
 
 ## Phase 7: regimes and their goals
 

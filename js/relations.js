@@ -88,7 +88,8 @@ function dailyWorld(rng, LW) {
   const ledger = iso => W.ledgerOf(iso), add = (iso, k, label, v, unit, reason) => ledger(iso).add("relations", "relations." + k, label, v, unit, reason);
   const isos = Object.keys(S).filter(iso => S[iso].views && S[iso].shares);
   const strength = Object.create(null), wealth = Object.create(null);
-  for (const iso of isos) { const s = S[iso]; strength[iso] = (P ? P.effectOf(s, "mil") : 0.5) * s.pop; wealth[iso] = (s._income || 0) / Math.max(s.pop, 1e-6); }
+  const WR = window.WAR;                                           // strength is the army's once the war pillar sizes it
+  for (const iso of isos) { const s = S[iso]; strength[iso] = WR ? WR.strengthOf(s) : (P ? P.effectOf(s, "mil") : 0.5) * s.pop; wealth[iso] = (s._income || 0) / Math.max(s.pop, 1e-6); }
   let pactsSigned = 0, pactsLost = 0, loans = 0, aidUnits = 0, defaults = 0;
   for (const a of isos) {
     const s = S[a], Le = ledger(a);
@@ -242,5 +243,7 @@ window.RELATIONS = W.registerPillar({
   name: "relations", label: "Relations", fields: FIELDS, seed, dailyWorld, rows, census, censusWorld, layers,
   config: { group: "Relations", defaults: LEVERS, rows: ROWS },
   K, LEVERS, viewOf, baseline, isAlly, temperWord,
+  addGrievance: (a, b, v) => { const s = W.COUNTRY_STATE[a]; if (s && s.views) stock(s, b).v = Math.min(K.stockCap, stock(s, b).v + v); },
+  addGoodwill: (a, b, v) => { const s = W.COUNTRY_STATE[a]; if (s && s.views) stock(s, b).g = Math.min(K.stockCap, stock(s, b).g + v); },
 });
 })();
