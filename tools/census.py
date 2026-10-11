@@ -5,12 +5,20 @@
   python tools/census.py --seeds 1,2 --years 1 --top 20
   python tools/census.py --quick             one seed, one year
   python tools/census.py --out census        keep each seed's JSON in census/
+  python tools/census.py --report war-2      also write docs/data/census-<date>-war-2.md
+                                             (and the seeds' JSON to docs/data/raw/war-2/)
 
 Prints a summary across seeds first (min, median and max of every
 numeric world line; the nations flagged in at least half the seeds),
 then one table per seed: the nations by population with every numeric
 census column and every flag.  A flag is a census key whose value is
 true or false; pillars add their own keys (docs/design.md §10).
+
+--report writes the same as a census report (docs/process.md §4): a
+header table (date, commit, command, seeds, days, pillars, ms a day),
+"At a glance" and "Summary" left as (fill in) for whoever reads it,
+the world lines, the flagged nations and the per-seed tables, and adds
+a row to docs/data/index.md.
 
 Each seed is one headless-browser run through tools/smoke.py --eval-file;
 the hold and timeout grow with the days asked for.
@@ -76,6 +84,74 @@ def is_num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+def md_table(rows, cols):
+    """A markdown table; rows are dicts, cols the keys in order."""
+    out = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
+    for r in rows:
+        out.append("| " + " | ".join(fmt(r.get(c)) for c in cols) + " |")
+    return "\n".join(out)
+
+
+def git_commit():
+    try:
+        p = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=str(ROOT))
+        return p.stdout.strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+def write_report(slug, results, seeds, days, pillars, world_keys, hot, names, top):
+    """docs/data/census-<date>-<slug>.md in the shape of docs/process.md §4, plus a row in the index."""
+    import datetime
+    date = datetime.date.today().isoformat()
+    data = ROOT / "docs" / "data"
+    data.mkdir(parents=True, exist_ok=True)
+    path = data / ("census-%s-%s.md" % (date, slug))
+    ms = [r.get("ms", 0) / max(days, 1) for r in results]
+    lines = ["# Census: %s" % slug, "",
+             "| field | value |", "|---|---|",
+             "| date | %s |" % date, "| kind | census |", "| commit | `%s` |" % git_commit(),
+             "| command | `%s` |" % " ".join(["python"] + [Path(sys.argv[0]).as_posix()] + sys.argv[1:]),
+             "| seeds | %s |" % ", ".join(str(s) for s in seeds), "| days | %d |" % days,
+             "| pillars | %s |" % (", ".join(pillars) or "none"),
+             "| ms per day | %d to %d |" % (min(ms), max(ms)), "",
+             "## At a glance", "", "- (fill in)", "", "## Summary", "", "(fill in)", "",
+             "## 1. World lines", ""]
+    rows = []
+    for k in world_keys:
+        vals = [r["world"].get(k, 0) for r in results]
+        rows.append({"line": k, "min": min(vals), "median": statistics.median(vals), "max": max(vals)})
+    lines += [md_table(rows, ["line", "min", "median", "max"]), "", "## 2. Flagged in at least half the seeds", ""]
+    if hot:
+        lines.append(md_table([{"nation": names[iso], "flag": k, "seeds": "%d/%d" % (c, len(results))} for c, iso, k in hot[:40]],
+                              ["nation", "flag", "seeds"]))
+    else:
+        lines.append("No nation is flagged in half the seeds.")
+    lines += ["", "## 3. Per seed", ""]
+    for r in results:
+        nations = sorted(r["nations"].values(), key=lambda n: -(n.get("pop") or 0))
+        num_keys, flag_keys = [], []
+        for n in nations:
+            for k, v in n.items():
+                if k in ("iso", "name", "pop"):
+                    continue
+                if is_num(v) and k not in num_keys:
+                    num_keys.append(k)
+                elif isinstance(v, bool) and k not in flag_keys:
+                    flag_keys.append(k)
+        w = r["world"]
+        lines += ["Seed %d: day %d, %d nations, %s M people, %d ms a day." % (
+                      r["seed"], w.get("day", 0), w.get("nations", 0), fmt(w.get("population", 0)), r.get("ms", 0) / max(days, 1)), "",
+                  md_table(nations[:top], ["iso", "name", "pop"] + num_keys + flag_keys), ""]
+    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8", newline="\n")
+    index = data / "index.md"
+    row = "| %s | census | %s | `%s` | [%s](%s) | (fill in) |" % (date, slug, git_commit(), path.name, path.name)
+    if index.exists():
+        index.write_text(index.read_text(encoding="utf-8").rstrip() + "\n" + row + "\n", encoding="utf-8", newline="\n")
+    print("census: report written to %s (fill in its At a glance, Summary and index row)" % path.relative_to(ROOT).as_posix(), file=sys.stderr)
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(description="Strain census over seeds")
     ap.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)), help="comma list of seeds")
@@ -83,6 +159,7 @@ def main():
     ap.add_argument("--days", type=int, help="days per seed, overriding --years")
     ap.add_argument("--top", type=int, default=40, help="nations per seed table, by population")
     ap.add_argument("--out", help="directory to keep each seed's JSON")
+    ap.add_argument("--report", metavar="SLUG", help="write docs/data/census-<date>-SLUG.md and the seeds' JSON to docs/data/raw/SLUG/")
     ap.add_argument("--quick", action="store_true", help="one seed, one year")
     ap.add_argument("--hold", type=int, help="ms the page may take (default grows with the days)")
     ap.add_argument("--timeout", type=int, help="seconds per browser run (default grows with the days)")
@@ -95,6 +172,8 @@ def main():
         seeds, days = seeds[:1], min(days, 365)
     hold = a.hold or max(60000, 60000 + days * 300)   # a day costs 100 to 250 ms on a busy machine
     timeout = a.timeout or max(120, hold // 1000 + 60)
+    if a.report and not a.out:
+        a.out = str(ROOT / "docs" / "data" / "raw" / a.report)
 
     results = []
     for seed in seeds:
@@ -154,6 +233,8 @@ def main():
         print(table(nations[:a.top], cols))
         if len(nations) > a.top:
             print("  ... and %d more" % (len(nations) - a.top))
+    if a.report:
+        write_report(a.report, results, seeds, days, pillars, world_keys, hot, names, a.top)
     return 0
 
 
