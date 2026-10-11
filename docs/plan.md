@@ -1,218 +1,110 @@
 # The plan
 
-Phases that build `design.md`. Each phase opens with a
-question-and-answer round that settles its open questions (listed in
-`design.md` §5), is built and documented in the same change, and ends
-green. Nothing in a later phase is started before the earlier one is
-done.
+The phases that build the map side from `design.md`, one system each,
+in order. How a phase runs, its gates and its rounds are in
+`process.md`; this file says where each phase stands, what it covers,
+and what done means for it. It changes only when a phase's scope or
+status does.
 
-**A phase is done when**
+## At a glance
 
-- the smoke test passes, with flags for the phase's behaviour;
-- its census line reads plausibly on six seeds over three years;
-- its state has card rows, a map layer where one makes sense, and wire
-  headlines for its events;
-- its levers are one group in the config panel, within the pillar's
-  target or with a note in `design.md`;
-- the reference docs describe it in the four-section template:
-  `map.md` for anything on the map's own side, a new `nations.md` for
-  the pillars;
-- `design.md` records the round's answers and any departure from them.
+| phase | goal | status | gate | rounds and data |
+|---|---|---|---|---|
+| 0 foundations | the scaffolding every pillar uses | built | G4a | FND-01 |
+| 1 economy | nations with people, reserves, developments, a budget | built, 5 Oct | G4a | ECO-01 to 09; [census](data/census-2026-10-05-phase1.md) |
+| 2 trade | goods and people move on the links | built, 6 Oct | G4a | TRD-01 to 12; [census](data/census-2026-10-06-trade.md), [after the sea links](data/census-2026-10-06-trade-sea.md) |
+| 3 end products | military and health as levels | built, 7 Oct | G4a | PRD-01 to 08; [before](data/census-2026-10-07-products-before.md), [after](data/census-2026-10-07-products-after.md) |
+| 4 the outbreak pass | the variant spreads and is answered | deferred | | OUT-01 |
+| 5 relations | views, pacts, aid, loans | built, 9 Oct | G4a | REL-01 to 10; [census](data/census-2026-10-09-relations.md) |
+| 6 war | the army, wars, the peace table, tributes | built, 10 Oct | G4a | WAR-01 to 11; [census](data/census-2026-10-10-war.md) |
+| 7 regimes | genomes of preferences, regime change, a bred pool | next; its first round restarts under `process.md` | | REG-01 |
+| 8 balance | the whole plays over an evening and reads clearly | later | | gaps table below |
+
+## Summary
+
+Six phases are built and each closed on a six-seed, three-year census
+that is now a file. The outbreak is its own pass, deferred until the
+nations are turbulent on their own. Regimes come next and replace the
+stand-in pressures that drive budgets and wars today. Balance tunes
+the numbers last, with the gaps listed at the bottom. Phases 0 to 6
+were run before the gates were written; their done-when lines below
+are what closed them, and G4a's checklist applies from phase 7 on.
 
 ## Phase 0: foundations
 
-**Goal.** The scaffolding every pillar uses, so the pillars stay
-small.
-
-**Scope.**
-- The per-nation ledger: one object per nation, reset each day, with
-  named lines a module appends to; the card reads it.
-- The daily order in `world.js` with a hook per pillar, in the order of
-  `design.md` §8; absent pillars are skipped.
-- The seeded daily random stream (one `mulberry32` per day from the
-  world seed and the day), handed to each pillar's step.
-- A census probe (`tools/probes/census.js`) that sets a seed, advances
-  N days and prints one line per nation and a world line; a Python
-  driver that runs it over six seeds and tabulates.
-- The config panel grouped per pillar; the card with a section per
-  pillar; pack-table rows for the new fields; save version 9.
-- `docs/nations.md` skeleton with the template.
-
-**Q&A.** None beyond the architecture decisions already taken.
-
-**Done when.** The probe runs on an empty world and prints the day; the
-save round trip covers the new rows; the smoke test stays green.
+- Goal: the scaffolding every pillar uses, so the pillars stay small.
+- Scope: the per-nation ledger; the daily order with a hook per pillar; the seeded daily streams; the census probe and its driver; the config panel grouped per pillar; the card with a section per pillar; pack rows and save version 9; the `nations.md` skeleton.
+- Rounds: none beyond the architecture decisions (ARC-01 to ARC-06).
+- Done when: the probe runs on an empty world and prints the day; the save round trip covers the new rows; the smoke test stays green.
 
 ## Phase 1: the economy
 
-**Goal.** `design.md` §4 in full: nations with people, water,
-reserves, infrastructure, economy, academia, technology, a treasury
-and a budget, changing only through ledger lines.
-
-**Scope.**
-- `economy.js`: seeding from the data rows (units from the 0..100
-  columns and the map's area); weather; needs; labour, needs first;
-  capture with diminishing returns and the energy cost; eating and
-  famine; upkeep, unpaid days, decay; money; the budget shares with
-  their reasons; research and technology's upkeep; stores; births and
-  deaths. Emigration is counted on the ledger and not yet moved
-  (phase 2 moves people).
-- The card's ledger section (§4.5).
-- Layers: economy (money per head), technology, a resource strain
-  layer (which reserve binds and how hard).
-- Wire: famine, a unit stopping or decaying, a budget share swinging, a
-  reserve ceiling raised.
-- Levers: the fifteen of §4.6, one config group.
-- Census: per nation, population, idle share, technology, treasury,
-  the binding resource and its strain; per world, totals and the count
-  of nations in famine.
-
-**Q&A at the start.**
-- The default numbers: a worked day for three nations (large and
-  rich, small and rich, large and poor) on paper before any code.
-- How the 0..100 row columns become units: infrastructure, economy and
-  academia per million people, reserves per km².
-- Whether stores start full, empty, or at some days of use.
-- What exactly the first wire headlines are.
-
-**Done when.** On six seeds over three years no nation vanishes or
-explodes; every shortage, idle count and decay on a card is explained
-by its lines; the budget shares move and their reasons read true; a
-drought shows in food and in the wire.
+- Goal: `design.md` §4 in full: nations with people, water, reserves, infrastructure, economy, academia, technology, a treasury and a budget, changing only through ledger lines.
+- Scope: `economy.js`: seeding from the data rows and the map's area; weather; needs; labour needs first; capture with diminishing returns and its energy cost; eating and famine; upkeep, unpaid days, decay; money; the budget shares with their reasons; research; stores; births and deaths. The card's ledger section; layers for money per head, technology and resource strain; wire headlines for famine, a unit stopping, a share swinging, a ceiling raised; fifteen levers; census lines.
+- Rounds: the phase 1 round of 5 October on a prototype (`design.md` §4.7; ECO-05 to ECO-09).
+- Done when: on six seeds over three years no nation vanishes or explodes; every shortage, idle count and decay on a card is explained by its lines; the budget shares move and their reasons read true; a drought shows in food and in the wire.
 
 ## Phase 2: trade and movement on the links
 
-**Goal.** The links carry goods and people. Surpluses meet shortfalls;
-the idle and the unhoused move; nations borrow.
-
-**Scope.** `trade.js`; the links' capacity gets its meaning (what a
-unit of capacity carries a day); stores past their cap sell; prices or
-deals per the round; debt; migration along the links to housing and
-free slots; the card's trade and movement rows; a trade layer; wire
-headlines for deals, defaults, migrations.
-
-**Q&A at the start.** `design.md` §5.1.
-
-**Done when.** Two neighbours, one short and one in surplus, end up
-trading on their own; a nation with no reserves of a resource lives on
-imports; people move from a crowded nation to an empty one; the world's
-resource balance is a census line.
+- Goal: the links carry goods and people; surpluses meet shortfalls; the idle and the unhoused move.
+- Scope: `trade.js`; the links' capacity gets its meaning; export capture; asks and offers; one world price per resource; deals; comfort; migration along the links; the card's trade rows; a trade layer; wire headlines for deals and migrations; levers; census lines. Debt was deferred to phase 5 (TRD-04, REL-07).
+- Rounds: `design.md` §5.1 (TRD-01 to TRD-12), 6 October.
+- Done when: two neighbours, one short and one in surplus, end up trading on their own; a nation with no reserves of a resource lives on imports; people move from a crowded nation to an empty one; the world's resource balance is a census line.
 
 ## Phase 3: end products
 
-**Goal.** `design.md` §5.7: military and health as levels built by the
-budget, with embodied technology and population, upkeep per resource
-and named decay; technology's upkeep and flat decay reworked.
+- Goal: `design.md` §5.7: military and health as levels built by the budget, with embodied technology and population, upkeep per resource and named decay; technology's upkeep and flat decay reworked.
+- Scope: `products.js` in the slot after the economy: the two levels, their running averages, the cost per point, upkeep and decay lines; the budget shares and their stand-in pressures; health's effect on births and deaths; technology's energy upkeep and fade; card rows; layers for military and health; wire headlines; census lines; levers.
+- Rounds: the design round of 6 October and the progression round of 7 October (`design.md` §5.7; PRD-01 to PRD-08).
+- Done when: on six seeds over three years levels rise where the budget feeds them and fall where it does not; a fast-growing nation's levels dilute visibly; a nation that stops building falls behind its own technology; every decay has its line.
 
-**Scope.** `products.js` (a new slot after the economy in the daily
-order): the two levels, their running averages, their cost per point,
-their upkeep and decay lines; the budget shares and their stand-in
-pressures; health's effect on births and deaths in the economy's
-people step; technology's energy upkeep scaled by population, economy
-and infrastructure, and its flat decay; card rows; layers for military
-and health; wire headlines (a level built or decaying, a health
-system behind its people); census lines; levers.
+## Phase 4: the outbreak pass
 
-**Q&A at the start.** The default numbers for the costs, upkeeps and
-decay rates, on a worked example as in phase 1.
-
-**Done when.** On six seeds over three years levels rise where the
-budget feeds them and fall where it does not; a fast-growing nation's
-levels dilute visibly; a nation that stops building falls behind its
-own technology; every decay has its line.
-
-## Phase 4: the outbreak pass (several phases)
-
-Deferred as a pass of its own, with its design rounds (`design.md`
-§5.2 and §5.3) held when it starts. Expected to split into: the
-variant's spread within and between countries on the trade pillar's
-flows; health's detection and response using the level of phase 3;
-pressure on the player and game over from the map. The coverage layer
-keeps its present meaning until then.
+- Goal: the variant spreads within and between countries on the trade flows, health detects and responds, the map presses on the player.
+- Scope: deferred as a pass of several phases (OUT-01), with its rounds (`design.md` §5.2, §5.3) held when it starts. The coverage layer keeps its present meaning until then.
+- Rounds: none yet.
+- Done when: to be set at its first round.
 
 ## Phase 5: relations and alliances
 
-**Goal.** Nations have friends and enemies for reasons on the card.
-
-**Scope.** `relations.js`; a view per direction (a baseline plus
-fading goodwill and grievance) moved by deals, aid, refusals, people
-taken in and a threat assessment; pacts after a season; aid in a
-famine; loans at interest with default; trade reading the views; a
-relations layer; wire headlines; census lines; levers.
-
-**Q&A at the start.** `design.md` §5.4 (two rounds, 8 October 2026).
-
-**Done when.** On six seeds over three years pacts form among
-neighbours that trade and lapse for reasons on the wire; a hawkish
-nation's coldest views are its weaker, richer neighbours; the nations
-with no reserves live on loans and food aid instead of starving; every
-move of a view has a line.
+- Goal: nations have friends and enemies for reasons on the card.
+- Scope: `relations.js`; a view per direction moved by deals, aid, refusals, people taken in and a threat assessment; pacts after a season; aid in a famine; loans at interest with default; trade reading the views; a relations layer; wire headlines; census lines; levers.
+- Rounds: two design rounds of 8 October and the round after building of 9 October (`design.md` §5.4; REL-01 to REL-10).
+- Done when: on six seeds over three years pacts form among neighbours that trade and lapse for reasons on the wire; a hawkish nation's coldest views are its weaker, richer neighbours; the nations with no reserves live on loans and food aid instead of starving; every move of a view has a line.
 
 ## Phase 6: war and the military
 
-**Goal.** Shortages next to surpluses start wars; wars end; the world
-has crises of its own.
-
-**Scope.** `war.js`; the army as a job (conscripts, wages from the
-military share, before the economy in the labour order); wars of
-need, greed and enmity across land borders; attrition, deaths, flight,
-closed borders, damage; the weekly peace table (position, weariness,
-demand and offer, surrender, white peace); tributes and their
-breaking; allies joining; a war layer; wire headlines; census lines;
-levers.
-
-**Q&A at the start.** `design.md` §5.5 (three rounds, 9 October 2026).
-
-**Done when.** On six seeds over three years wars start for reasons on
-the wire and end at the table; a hawk's victims pay and recover; a
-defender's allies join; no nation is fought to nothing; every loss has
-a line.
+- Goal: shortages next to surpluses start wars; wars end; the world has crises of its own.
+- Scope: `war.js`; the army as a job (conscripts, wages from the military share, before the economy in the labour order); wars of need, greed and enmity across land borders; attrition, deaths, flight, closed borders, damage; the weekly peace table; tributes and their breaking; allies joining; a war layer; wire headlines; census lines; levers.
+- Rounds: three design rounds of 9 and 10 October and the round after building (`design.md` §5.5; WAR-01 to WAR-11).
+- Done when: on six seeds over three years wars start for reasons on the wire and end at the table; a hawk's victims pay and recover; a defender's allies join; no nation is fought to nothing; every loss has a line.
 
 ## Phase 7: regimes and their goals
 
-**Goal.** `design.md` §5.8: regimes with genomes of preferences and
-thresholds, stability as grievance, regime change by type, a pool of
-genomes bred offline.
-
-**Scope.** `regimes.js` (stability, the regime record, the triggers,
-selection and mutation at a change, the card's named traits and score);
-the economy's and the products' rules reading their thresholds and
-weights from the regime; `tools/evolve.py` breeding the pool in the
-headless census and writing it to a data file; wire headlines for
-elections, successions, coups and collapses; a stability layer; census
-lines.
-
-**Q&A at the start.** The gene list and the words for each; the
-pressures and their weights in grievance; the terms and lines per
-type; the fitness the breeder scores by; how large the pool is.
-
-**Done when.** Regimes change for readable reasons; a world bred from
-the pool is better governed than one with random genomes on the census;
-a nation's card says in words what its government wants.
+- Goal: `design.md` §5.8: regimes with genomes of preferences and thresholds, stability as grievance, regime change by type, a pool of genomes bred offline.
+- Scope: `regimes.js` (stability, the regime record, the triggers, selection and mutation at a change, the card's named traits and score); the economy's, relations' and war's stand-in rules reading their weights and lines from the regime; `tools/evolve.py` breeding the pool in the headless census and writing it to a data file; wire headlines for elections, successions, coups and collapses; a stability layer; census lines.
+- Rounds: the first design round (the gene list and its words, the grievance pressures and weights, the terms and lines per type, the breeder's fitness, the pool's size) is written as `data/round-<date>-regimes-1.md` under `process.md` §2 before it is asked.
+- Done when: G4a; regimes change for readable reasons; a world bred from the pool is better governed than one with random genomes on the census; a nation's card says in words what its government wants.
 
 ## Phase 8: balance
 
-**Goal.** The whole plays over an evening and reads clearly throughout.
+- Goal: the whole plays over an evening and reads clearly throughout.
+- Scope: tuning rounds (`process.md` §2, level L4) on the gaps below and on what the censuses show, each a round file with a census before and after; the lever lists trimmed to what was moved.
+- Rounds: one per gap or finding.
+- Done when: G4b for every round; no gap in the table below is open without a decision record saying why.
 
-**Scope.** A census across seeds and years; tuning passes, each
-recorded in `design.md` as a short entry (what moved, why, what the
-census showed before and after); the lever list trimmed to what was
-actually moved.
+## Known gaps
 
-**Known gaps carried here.** Technology stalls where the economy
-absorbs every worker (phase 1). A nation living on imports is capped
-by its trade capacity and buys food before the energy its technology
-needs; Japan fails this way on most seeds (phase 5's census). The
-military and health shares are stand-ins until regimes decide them
-(phase 3).
+| gap | seen in | owner phase | id |
+|---|---|---|---|
+| Technology stalls where the economy absorbs every worker | [census 5 Oct](data/census-2026-10-05-phase1.md) | 8 | ECO-02 |
+| A nation living on imports is capped by its trade capacity and buys food before the energy its technology needs; Japan fails on most seeds | [census 9 Oct](data/census-2026-10-09-relations.md) | 8 | REL-10 |
+| The military and health budget shares are stand-ins from the data row and the deaths line | design.md §5.7 | 7 | PRD-06 |
+| Temperament and the war triggers are stand-ins from the row's authority and freedom; a hawk at 1.0 rotates through its weaker neighbours | [census 10 Oct](data/census-2026-10-10-war.md) | 7 | REL-05, WAR-09 |
+| No war of need or enmity has started: the world is in surplus and land neighbours are friends by the relations baseline | [census 10 Oct](data/census-2026-10-10-war.md) | 8 | WAR-09 |
+| The military mean fell from 54 to 50 with wages and attrition | [census 10 Oct](data/census-2026-10-10-war.md) | 8 | WAR-06 |
 
-## Working rules for every phase
+## Working rules
 
-- Build from `design.md`. Consult the old code for mechanics only.
-- One pillar, one module, one config group, one card section, one
-  census line.
-- Every commit is green on the smoke test.
-- A pillar's reference section in `nations.md` is written before its
-  numbers are tuned, so the tuning has something to be checked against.
-- Dates and decisions go in `design.md`; this file changes only when a
-  phase's scope does.
+- Phases run in order; nothing in a later phase starts before the earlier one is done (PRC-01).
+- Everything else is `process.md`: the gates, the round protocol, the decision records, the data files, the register, the writing rules, the checks.

@@ -8,8 +8,55 @@ phases. The reference documents (`bench.md`, `map.md`, `player.md`)
 describe what exists today and are updated as phases land.
 
 Decisions here were taken in a question-and-answer session on 3 to 5
-October 2026. Where a choice was made, the alternatives considered are
-not repeated; where a choice is open, the alternatives are listed.
+October 2026 and in each phase's rounds since; every one has a record
+in `decisions.md`, cited by id in the table below. Where a choice is
+open, the alternatives are listed. Sections 1 to 3 and 6 to 10 are
+the concept and the architecture (levels L1 and L2 of `process.md`);
+section 4 and the sections of 5 are the systems as decided (L3), each
+to be rewritten on `templates/system-design.md` when its system is
+next reworked.
+
+## At a glance
+
+- The loop: a variant spreads along the links and is answered; nations act from their situation; what happens comes back on the player (§1).
+- Eight principles: every number a ledger line, no targets, every decision a reason, few levers, one daily order, deterministic per seed, a probe from day one, concrete units (§2).
+- Units: millions of people, resource units a day (one food unit feeds a million for a day), money, development units, technology a level (§3).
+- The day runs the slots weather, economy, products, trade, health, relations, war; a pillar reads only what earlier slots wrote (§8, §10).
+- Lever targets: 15 a pillar for the economy, trade, health and war, 10 for relations and the player (§9).
+- Built: the economy (§4), trade (§5.1), end products (§5.7), relations (§5.4), war (§5.5). Decided but not built: regimes (§5.8). Open: health and the outbreak (§5.2), pressure on the player (§5.3).
+- The censuses that closed each phase are in `data/`; the decisions in `decisions.md`.
+
+## Summary
+
+This document is the design of the map side at three levels: what
+the map is for and the rules it keeps (§1 to §3), how the nations are
+put together and run (§4, §8 to §10), and each system as its rounds
+decided it (§5). The phases that built it are in `plan.md`; what the
+code does today is in `nations.md`. The sections of §5 are in the
+order they were written, not the order of the day; the table below
+says where each stands and where its numbers are.
+
+## Where each section stands
+
+| section | system | level | status | decisions | data |
+|---|---|---|---|---|---|
+| §1 What the map is for | concept | L1 | decided | CON-01 to CON-03 | |
+| §2 Principles | concept | L1 | decided | CON-04 | |
+| §3 Units | concept | L1 | decided | CON-05 | |
+| §4 The nation, §4.7 as built | economy | L3, L4 | built, phase 1 | ECO-01 to ECO-09 | [census 5 Oct](data/census-2026-10-05-phase1.md) |
+| §5.1 Trade | trade | L3, L4 | built, phase 2 | TRD-01 to TRD-12 | [census 6 Oct](data/census-2026-10-06-trade.md), [after the sea links](data/census-2026-10-06-trade-sea.md) |
+| §5.2 Health and the outbreak | health, outbreak | L3 | open, the outbreak pass | OUT-01 | |
+| §5.3 Pressure on the player | player | L3 | open, the outbreak pass | OUT-01 | |
+| §5.4 Relations and alliances | relations | L3, L4 | built, phase 5 | REL-01 to REL-10 | [census 9 Oct](data/census-2026-10-09-relations.md) |
+| §5.5 War and the military | war | L3, L4 | built, phase 6 | WAR-01 to WAR-11 | [census 10 Oct](data/census-2026-10-10-war.md) |
+| §5.6 Presentation | all | L2 | decided | ARC-02 | |
+| §5.7 End products | products | L3, L4 | built, phase 3 | PRD-01 to PRD-08 | [before the round](data/census-2026-10-07-products-before.md), [after](data/census-2026-10-07-products-after.md) |
+| §5.8 Regimes | regimes | L1 | decided, phase 7 next | REG-01 | |
+| §6 The bench and the map | concept | L1 | decided | CON-02 | |
+| §7 Scope | concept | L1 | decided | CON-07 | |
+| §8 The daily order | architecture | L2 | decided | ARC-01 | |
+| §9 Lever targets | architecture | L2 | decided | ARC-03 | |
+| §10 Architecture | architecture | L2 | decided | ARC-01 to ARC-06 | |
 
 ## 1. What the map is for
 

@@ -6,6 +6,13 @@ what it touches, defaults and levers, assumptions built in. The design
 they are built from is `design.md`; the phases are in `plan.md`. A
 pillar that is not built yet has a placeholder here saying so.
 
+From 11 October 2026 a section is rewritten on
+`templates/system-reference.md` (its day with the ledger keys, what it
+touches, a register of variables and formulas, levers and constants,
+departures from the design, gaps) when its system is next reworked;
+until then it keeps the four-section template below. Decisions are
+cited by id from `decisions.md`; censuses are in `data/`.
+
 A pillar is a module that runs part of a nation's day. Every pillar
 registers once with the world (`WORLD.registerPillar` in
 `js/world.js`), is run in the published order each day with its own

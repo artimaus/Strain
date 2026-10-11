@@ -9,23 +9,30 @@ money, a title, research projects that pay for variants with particular
 traits, and the suspicion your work attracts. Reach 100% suspicion and
 you are busted.
 
-The bench simulation is called Entity, and that is the name the code
-uses for its globals (`window.ENTITY`, `ENTITY_*`). Strain is the game
-around it.
+## At a glance
 
-**Status.** The map side is being redesigned. Today a deployed variant
-marks a country as covered and nothing moves: no spread, no detection,
-no response. The link graph between countries (land borders, sea lanes,
-air routes) is built and waiting for the model that will travel on it.
-The previous map simulation, a full nation economy with decisions,
-governments and wars, was removed in October 2026 because it had grown
-past the point of being understood; it is in the git history (commit
-`c118a8f`) if ever needed.
+- Plain HTML, CSS and JavaScript, no build step; open `Strain.html` or run `python tools/serve.py`.
+- The bench simulation is called Entity and is finished; the map side is being rebuilt as pillars: economy, products, trade, relations, war are built; health, the outbreak and regimes are not.
+- Today a deployed variant marks a country as covered and nothing spreads; the outbreak is its own pass to come.
+- Test with `python tools/smoke.py` (headless Chrome, about four minutes); census the world with `python tools/census.py`; check the docs with `python tools/doclint.py`.
+- How we work is written down: `docs/process.md` (levels, gates, rounds), `docs/glossary.md` (terms), `docs/decisions.md` (every decision by system), `docs/data/` (every census and round).
+- The previous nation simulation was removed in October 2026 (commit `c118a8f`) because it had grown past being understood.
 
-## Running it
+## Summary
 
-Plain HTML, CSS and JavaScript. No build step, no dependencies beyond
-the world map data, which is fetched from a CDN at load.
+Strain is the game, Entity the bench model the code names its globals
+after. The bench, the map rendering, the link graph and the player
+layer are stable and described in `docs/bench.md`, `docs/map.md` and
+`docs/player.md`. The map's nations are being rebuilt one pillar at a
+time from `docs/design.md`, following `docs/plan.md`; what each pillar
+does today is in `docs/nations.md`. Every decision has a record and
+every measurement a file, so the reasons behind a number can be found
+without reading the chat that produced it.
+
+## 1. Running it
+
+No dependencies beyond the world map data, which is fetched from a
+CDN at load.
 
 - Open `Strain.html` in a browser. Everything works from `file://`.
 - Or serve it without caching: `python tools/serve.py`, then open
@@ -33,24 +40,20 @@ the world map data, which is fetched from a CDN at load.
   which can load an old page against new scripts.
 - VS Code: the two launch configurations in `.vscode/` do the same.
 
-Python 3 is needed only for the dev server and the tests.
+Python 3 is needed only for the dev server and the tools.
 
-## Testing
+## 2. Testing and measuring
 
-`python tools/smoke.py` boots the page in headless Chrome or Edge and
-checks it without a human: no errors at boot, all five plates alive,
-every dialog opens and closes, the link graph is built, a save round
-trip restores coverage and the day, and the bench fits without
-scrollbars at nine window sizes. It takes about half a minute.
+| command | what it does | takes |
+|---|---|---|
+| `python tools/smoke.py` | boots the page in headless Chrome or Edge: no errors, five plates alive, every dialog, the links, each pillar's flags, a save round trip, the layout at nine sizes | about 4 min |
+| `python tools/smoke.py --only boot,sim,modals,text` | the quick half | about 1 min |
+| `python tools/smoke.py --eval "return WORLD.day"` | runs a snippet in the booted page; `--eval-file probe.js`; `--shot out.png` for a screenshot | seconds |
+| `python tools/smoke.py --eval-file tools/probes/tap.js` | a real pointer sequence on the map: a tap opens the country card, a drag does not | seconds |
+| `python tools/census.py` | six seeds over three years, every pillar's census line; `--quick` one seed one year; `--report <slug>` writes `docs/data/census-<date>-<slug>.md` | about 20 min |
+| `python tools/doclint.py` | the docs' format, decision ids, registers against the code, data headers, line endings | seconds |
 
-- `python tools/smoke.py --only boot,sim,modals,text` is the quick half.
-- `python tools/smoke.py --eval-file tools/probes/tap.js` drives a real
-  pointer sequence on the map and checks the country card opens on a
-  tap and not on a drag.
-- `python tools/smoke.py --eval "return WORLD.day"` runs any snippet in
-  the booted page; `--shot out.png` saves a screenshot instead.
-
-## Where things are
+## 3. Where things are
 
 | Path | What |
 |---|---|
@@ -66,31 +69,47 @@ scrollbars at nine window sizes. It takes about half a minute.
 | `js/data.js` | One row per country: region, population and hand-set levels. |
 | `js/geo.js` | Regions and their climates; the curated mountain and micro-state border tables. |
 | `js/bounties.js` | The research-project generator. |
-| `js/world.js` | Per-country coverage, the world clock, the map hand-off, regions, the news log, the save tables. |
+| `js/world.js` | The pillar registry, the ledger and its history, the seeded streams, the world clock, the census hooks, the save tables. |
 | `js/links.js` | The land, sea and air graph with a capacity per edge. |
 | `js/economy.js` | The economy pillar: a nation's day, its card rows, map layers, wire headlines and census line. |
 | `js/products.js` | The products pillar: military and health as levels with embodied technology and population, built and decaying by named lines. |
 | `js/trade.js` | The trade pillar: export capture, asks and offers, deals, the world prices, migration along the links. |
 | `js/relations.js` | The relations pillar: directed views with a baseline and fading goodwill and grievance, pacts, aid, loans. |
-| `js/war.js` | The war pillar: the army as a job, wars over shortages and enmities, attrition, the weekly peace table, tributes. |
+| `js/war.js` | The war pillar: the army as a job, wars of need, greed and enmity, attrition, the weekly peace table, tributes. |
 | `js/shell.js` | The player, titles, variants, the view switch, the config panel, `window.ENTITY`. |
 | `js/worldui.js` | The country card, the region dialog, the deploy dialog. |
 | `js/wire.js` | The calendar readout and the news panel on the map. |
 | `js/map.js` | The world map: topojson decoding, Mercator, borders and coastlines, layers, tooltip, pan and zoom. |
 | `js/progression.js` | Career offers, research projects, save and load, game over, new game. |
 | `js/boot.js` | The debug flag and the map data preload. |
-| `tools/smoke.py` | The headless test. `tools/serve.py` is the dev server; `tools/census.py` runs the census probe over seeds; `tools/probes/` holds the eval scripts. |
-| `docs/` | The documentation, below. |
+| `tools/` | `smoke.py` the headless test; `census.py` the census over seeds; `doclint.py` the docs check; `serve.py` the dev server; `probes/` the page scripts. |
+| `docs/` | The documentation (next section); `docs/data/` the censuses and rounds; `docs/templates/` the skeleton of each document kind. |
 
 Scripts load in a fixed order (the comment at the end of `Strain.html`
 says why). Each module is one function that publishes one object on
 `window` and reads the others only inside functions that run after
 load.
 
-## Documentation
+## 4. Documentation
 
-- [docs/bench.md](docs/bench.md): the Entity model and the bench.
-- [docs/map.md](docs/map.md): the world map, the country data, the links, the world container.
-- [docs/player.md](docs/player.md): the career, variants, research projects, saving.
-- [docs/design.md](docs/design.md): the redesign of the map side: what the map is for, the principles, the nation economy in full, and the open pillars with the questions each phase has to answer.
-- [docs/plan.md](docs/plan.md): the phases that build it, each with its scope, its opening questions and what done means.
+| doc | what it answers | level |
+|---|---|---|
+| [docs/process.md](docs/process.md) | how we work: levels, gates, rounds, decision records, data files, the register, the writing rules | method |
+| [docs/glossary.md](docs/glossary.md) | what every term means, with its code name | method |
+| [docs/decisions.md](docs/decisions.md) | every decision, by system, with its options and reason | method |
+| [docs/data/index.md](docs/data/index.md) | every census and round, with its one-line result | method |
+| [docs/design.md](docs/design.md) | what the map is for, the principles, the architecture, and each system as decided | L1, L2, L3 |
+| [docs/plan.md](docs/plan.md) | the phases: where each stands, its scope, its rounds, what done means | L3, L4 |
+| [docs/nations.md](docs/nations.md) | what each pillar does today: its day, what it touches, its levers, its gaps | L4 |
+| [docs/bench.md](docs/bench.md) | the Entity model and the bench | reference |
+| [docs/map.md](docs/map.md) | the world map, the country data, the links, the world container | reference |
+| [docs/player.md](docs/player.md) | the career, variants, research projects, saving | reference |
+| [docs/templates/](docs/templates/) | the skeleton of a concept, an architecture note, a system design, a system reference, a round, a decision | method |
+
+## 5. How we work
+
+- Four levels, each with a gate: concept, technical design, vertical system design, implementation and tuning (`docs/process.md` §1).
+- A round is file first: the brief, the options and their predicted numbers are in `docs/data/round-*.md` before the question is asked (`docs/process.md` §2).
+- Every answer is a decision record in `docs/decisions.md`; docs cite the id.
+- Every census is a report in `docs/data/`; the index carries the one line that matters.
+- Every doc starts with At a glance and Summary; numbers go in tables; `tools/doclint.py` checks it.
