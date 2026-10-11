@@ -76,6 +76,7 @@ says which this project means on the map side.
 | census report | The committed file a census run writes: header, world lines, flagged nations, per-seed tables | `docs/data/census-<date>-<slug>.md` |
 | tuning round | An L4 round that moves levers or constants against a prediction and closes with keep or revert | round file, level L4 |
 | verdict | The one line that closes a round: keep, revert, or follow-up round | round file §5 |
+| diagram | A Mermaid fenced block in a doc: a flowchart for an order of steps, a state diagram for types and transitions, a sequence diagram for an exchange; the numbers sit in a table beside it; the pillar dependency graph is generated from the code | `process.md` §6; `python tools/doclint.py --mermaid` |
 
 ## 4. The tools
 

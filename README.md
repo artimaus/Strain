@@ -52,6 +52,7 @@ Python 3 is needed only for the dev server and the tools.
 | `python tools/smoke.py --eval-file tools/probes/tap.js` | a real pointer sequence on the map: a tap opens the country card, a drag does not | seconds |
 | `python tools/census.py` | six seeds over three years, every pillar's census line; `--quick` one seed one year; `--report <slug>` writes `docs/data/census-<date>-<slug>.md` | about 20 min |
 | `python tools/doclint.py` | the docs' format, decision ids, registers against the code, data headers, line endings | seconds |
+| `python tools/doclint.py --mermaid` | the pillar dependency graph as a Mermaid block, generated from the code, for `docs/design.md` §10 | seconds |
 
 ## 3. Where things are
 

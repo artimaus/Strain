@@ -825,6 +825,11 @@ outbreak → relations → war → presentation (ledger close, map, wire).
 A pillar that is not built yet is skipped. The order is fixed here and
 changed only by a design decision.
 
+```mermaid
+flowchart LR
+  weather --> economy --> products --> trade --> health --> relations --> war --> close[ledgers close, map, wire]
+```
+
 ## 9. Lever targets
 
 | Pillar | Target |
@@ -861,3 +866,30 @@ section, lever by lever. The existing player and link levers
   changes; the links are never saved.
 - **Config.** Each pillar's levers are one group in the config panel,
   named for the pillar, with the unit beside each.
+
+**Dependencies**, generated from the code by `python tools/doclint.py
+--mermaid` on 11 October 2026: an edge runs from the pillar that owns
+an item to the pillar that reads it; `_x` is a readout, a bare name a
+member of the owner's object. Regenerate and paste when a pillar
+changes what it reads.
+
+```mermaid
+flowchart LR
+  economy -->|"K, wageOf"| products
+  economy -->|"K, _idle, _strain, capture, captureEnergyPer, cpw, needs, slotsOf"| trade
+  economy -->|"K, LEVERS, _bill, _income"| relations
+  economy -->|"K, LEVERS, _income, _paid, _wageBudget, needs, wageOf"| war
+  products -->|"_birthMul, _deathMul, buildMaterialsPerMoney, upkeepOf"| economy
+  products -->|"_prodAsk, upkeepOf"| trade
+  products -->|"effectOf"| relations
+  products -->|"effectOf"| war
+  trade -->|"_exportWorkers, _idle"| economy
+  trade -->|"LEVERS, _arrivedFrom, _lapsed, _refusedBy"| relations
+  trade -->|"LEVERS, _arrivedFrom"| war
+  relations -->|"_due"| economy
+  relations -->|"_arrivedFrom, _friendly, _lapsed, _refusedBy, _refuses, isAlly"| trade
+  relations -->|"LEVERS, _arrivedFrom, _refuses, addGrievance, isAlly, viewOf"| war
+  war -->|"_tributeDue, _wageBudget"| economy
+  war -->|"_arrivedFrom, _refuses"| trade
+  war -->|"_arrivedFrom, _refuses, strengthOf"| relations
+```

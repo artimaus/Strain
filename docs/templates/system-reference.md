@@ -25,6 +25,11 @@ The day, in order; each step names the ledger keys it writes.
 1. <step> → `<pillar>.<key>`
 2. <step> → `<pillar>.<key>`
 
+```mermaid
+flowchart LR
+  s1[1 step] --> s2[2 step] --> s3[3 step]
+```
+
 | surface | items |
 |---|---|
 | card rows | <labels> |

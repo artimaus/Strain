@@ -29,6 +29,11 @@ The day, in order; each step names the formulas it uses.
 1. <step> (F1, F2)
 2. <step> (F3)
 
+```mermaid
+flowchart LR
+  s1[1 step] --> s2[2 step] --> s3[3 step]
+```
+
 | id | formula | symbols | levers |
 |---|---|---|---|
 | F1 | <formula> | <symbol: doc name, unit> | `<lever>` |

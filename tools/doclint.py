@@ -3,6 +3,9 @@
 
   python tools/doclint.py              every check; exit 1 on any failure
   python tools/doclint.py --readouts   print the s._x readouts each pillar sets and reads
+  python tools/doclint.py --mermaid    print the pillar dependency graph as a Mermaid
+                                       block (readouts and members read across pillars)
+                                       to paste into docs/design.md §10
 
 Checks
   1 format    every docs/**/*.md (not templates/, data/raw/, the legacy
@@ -197,12 +200,50 @@ def readouts():
         print("%s\n  sets:  %s\n  reads: %s" % (name, ", ".join("_" + s for s in sets) or "none", ", ".join("_" + r for r in reads) or "none"))
 
 
+UPPER = {"economy": "ECONOMY", "products": "PRODUCTS", "trade": "TRADE", "relations": "RELATIONS", "war": "WAR"}
+
+
+def mermaid():
+    """A Mermaid flowchart of what each pillar takes from the others, from the code:
+    readouts one pillar sets and another reads, and members of another pillar's object
+    (window.X.member, or an alias `const E = window.ECONOMY`). An edge runs from the
+    pillar that owns the item to the pillar that reads it."""
+    srcs = {n: read(ROOT / "js" / (n + ".js")) for n in PILLARS if (ROOT / "js" / (n + ".js")).exists()}
+    sets = {n: set(re.findall(r"\._(\w+)\s*=[^=]", s)) for n, s in srcs.items()}
+    reads = {n: set(re.findall(r"\._(\w+)\b", s)) for n, s in srcs.items()}
+    edges = {}
+    for q, src in srcs.items():
+        for x in reads[q]:
+            for p in srcs:
+                if p != q and x in sets[p]:
+                    edges.setdefault((p, q), set()).add("_" + x)
+        for p, U in UPPER.items():
+            if p == q:
+                continue
+            members = set(re.findall(r"window\.%s\.(\w+)" % U, src))
+            for alias in set(re.findall(r"\b(\w+)\s*=\s*window\.%s\b" % U, src)):
+                members |= set(re.findall(r"\b%s\.(\w+)" % re.escape(alias), src))
+            for m in members:
+                edges.setdefault((p, q), set()).add(m)
+    print("```mermaid")
+    print("flowchart LR")
+    for p in PILLARS:
+        for q in PILLARS:
+            if (p, q) in edges:
+                print('  %s -->|"%s"| %s' % (p, ", ".join(sorted(edges[(p, q)])), q))
+    print("```")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Strain docs check")
     ap.add_argument("--readouts", action="store_true", help="print each pillar's readouts")
+    ap.add_argument("--mermaid", action="store_true", help="print the pillar dependency graph as a Mermaid block")
     a = ap.parse_args()
     if a.readouts:
         readouts()
+        return 0
+    if a.mermaid:
+        mermaid()
         return 0
     out, notes = [], []
     for p in sorted(DOCS.rglob("*.md")):
