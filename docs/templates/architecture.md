@@ -1,0 +1,59 @@
+# <Area>: architecture
+
+| field | value |
+|---|---|
+| level | L2 |
+| status | wiring / wired (G2) |
+| decisions | ARC-01 … |
+| rounds | data/round-<date>-architecture-1.md |
+
+## At a glance
+
+- <5 to 10 bullets: the parts, the order they run in, how they talk, the budgets>
+
+## Summary
+
+<One paragraph, at most 120 words.>
+
+## 1. Parts
+
+| module | owns | publishes | reads |
+|---|---|---|---|
+| `js/<name>.js` | <state and lines> | `window.<NAME>` | <other objects, only inside functions that run after load> |
+
+## 2. Order and interfaces
+
+| slot | pillar | runs | writes for later slots |
+|---|---|---|---|
+| 1 | <name> | <world step, nation step> | <readouts, fields> |
+
+| hook | signature | contract |
+|---|---|---|
+| `seed(iso, s, rng)` | | <fills a fresh state from the data row> |
+
+| naming | rule | example |
+|---|---|---|
+| ledger key | `<pillar>.<name>` | `economy.famine` |
+| field | `[key, short, default]` | `["treasury", "tre", 0]` |
+| readout | `_name`, never saved | `s._idle` |
+| census key | the doc name, camel case | `famineNations` |
+
+## 3. Budgets
+
+| budget | value | checked by |
+|---|---|---|
+| levers per system | <target table> | doclint |
+| milliseconds a day | <n> | census header |
+| smoke seconds | <n> | smoke.py |
+
+## 4. Dependency matrix
+
+| reads → / writes ↓ | <system A> | <system B> |
+|---|---|---|
+| <system A> | | <item> |
+
+## 5. Decisions
+
+| id | question | decision |
+|---|---|---|
+| ARC-01 | <question> | <one line> |
